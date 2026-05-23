@@ -1,5 +1,6 @@
 'use client';
 
+import { memo, useCallback } from 'react';
 import { Lightbulb } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Lesson } from '@/lib/types';
@@ -10,9 +11,9 @@ interface LessonContentProps {
   className?: string;
 }
 
-export function LessonContent({ lesson, className }: LessonContentProps) {
-  // Parse markdown-like content
-  const renderContent = (content: string) => {
+export const LessonContent = memo(function LessonContent({ lesson, className }: LessonContentProps) {
+  // Parse markdown-like content - memoized to prevent recreation on every render
+  const renderContent = useCallback((content: string) => {
     // Handle bold text
     const parts = content.split(/(\*\*[^*]+\*\*)/g);
     return parts.map((part, i) => {
@@ -25,7 +26,7 @@ export function LessonContent({ lesson, className }: LessonContentProps) {
       }
       return <span key={i}>{part}</span>;
     });
-  };
+  }, []);
 
   return (
     <article className={cn('max-w-none', className)}>
@@ -80,4 +81,4 @@ export function LessonContent({ lesson, className }: LessonContentProps) {
       )}
     </article>
   );
-}
+});

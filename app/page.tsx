@@ -1,6 +1,5 @@
 'use client';
 
-import { Sidebar } from '@/components/sidebar';
 import { Header } from '@/components/header';
 import { ProgressRing } from '@/components/progress';
 import { ModuleCard } from '@/components/module-card';
@@ -14,14 +13,11 @@ export default function Dashboard() {
   const currentModule = courseModules.find(m => m.id === currentModuleProgress?.moduleId);
 
   return (
-    <div className="min-h-screen bg-background">
-      <Sidebar />
-      
-      <main className="md:ml-[260px] transition-all duration-300">
-        <Header 
-          title={`Welcome back, ${mockLearner.name.split(' ')[0]}`}
-          subtitle="Continue your AI/ML learning journey"
-        />
+    <>
+      <Header
+        title={`Welcome back, ${mockLearner.name.split(' ')[0]}`}
+        subtitle="Continue your AI/ML learning journey"
+      />
         
         <div className="p-6 lg:p-8 max-w-7xl mx-auto">
           {/* Stats Grid */}
@@ -173,7 +169,6 @@ export default function Dashboard() {
             </div>
           )}
         </div>
-      </main>
-    </div>
+    </>
   );
 }

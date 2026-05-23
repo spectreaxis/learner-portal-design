@@ -1,23 +1,21 @@
 'use client';
 
+import { memo, useMemo, useState } from 'react';
 import { Play, ExternalLink } from 'lucide-react';
 import { VideoLesson } from '@/lib/types';
-import { useState } from 'react';
 
 interface VideoPlayerProps {
   video: VideoLesson;
 }
 
-export function VideoPlayer({ video }: VideoPlayerProps) {
+export const VideoPlayer = memo(function VideoPlayer({ video }: VideoPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
-  
-  // Extract YouTube video ID from URL
-  const getYoutubeId = (url: string) => {
-    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
-    return match ? match[1] : null;
-  };
 
-  const videoId = getYoutubeId(video.url);
+  // Memoize video ID extraction to prevent regex on every render
+  const videoId = useMemo(() => {
+    const match = video.url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
+    return match ? match[1] : null;
+  }, [video.url]);
 
   return (
     <div className="rounded-2xl overflow-hidden bg-card border border-border shadow-sm">
@@ -83,4 +81,4 @@ export function VideoPlayer({ video }: VideoPlayerProps) {
       </div>
     </div>
   );
-}
+});

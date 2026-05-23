@@ -3,7 +3,6 @@
 import { use } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { Sidebar } from '@/components/sidebar';
 import { Header } from '@/components/header';
 import { LessonListItem } from '@/components/module-card';
 import { ProgressBar } from '@/components/progress';
@@ -29,14 +28,11 @@ export default function ModulePage({ params }: ModulePageProps) {
     : 0;
 
   return (
-    <div className="min-h-screen bg-background">
-      <Sidebar />
-      
-      <main className="md:ml-[260px] transition-all duration-300">
-        <Header 
-          title={`Module ${module.number}`}
-          subtitle={module.title}
-        />
+    <>
+      <Header
+        title={`Module ${module.number}`}
+        subtitle={module.title}
+      />
         
         <div className="p-6 lg:p-8 max-w-7xl mx-auto">
           {/* Module Overview */}
@@ -172,7 +168,6 @@ export default function ModulePage({ params }: ModulePageProps) {
             )}
           </div>
         </div>
-      </main>
-    </div>
+    </>
   );
 }

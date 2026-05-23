@@ -1,6 +1,5 @@
 'use client';
 
-import { Sidebar } from '@/components/sidebar';
 import { Header } from '@/components/header';
 import { ModuleCard } from '@/components/module-card';
 import { courseModules, mockLearner, getModuleProgress } from '@/lib/course-data';
@@ -10,14 +9,11 @@ export default function LearnPage() {
   const currentModuleProgress = mockLearner.progress.find(p => !p.completed);
 
   return (
-    <div className="min-h-screen bg-background">
-      <Sidebar />
-      
-      <main className="md:ml-[260px] transition-all duration-300">
-        <Header 
-          title="Course Overview"
-          subtitle="IIAIC Basic AI/ML Literacy Course"
-        />
+    <>
+      <Header
+        title="Course Overview"
+        subtitle="IIAIC Basic AI/ML Literacy Course"
+      />
         
         <div className="p-6 lg:p-8 max-w-7xl mx-auto">
           {/* Course Description */}
@@ -85,7 +81,6 @@ export default function LearnPage() {
             </div>
           </div>
         </div>
-      </main>
-    </div>
+    </>
   );
 }

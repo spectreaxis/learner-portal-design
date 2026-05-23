@@ -3,7 +3,6 @@
 import { use, useState } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { Sidebar } from '@/components/sidebar';
 import { LessonContent } from '@/components/lesson-content';
 import { QuizSection } from '@/components/quiz-section';
 import { LessonListItem } from '@/components/module-card';
@@ -65,9 +64,7 @@ export default function LessonPage({ params }: LessonPageProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <Sidebar />
-      
+    <>
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-background border-b border-border flex items-center justify-between px-4">
         <button
@@ -336,6 +333,6 @@ export default function LessonPage({ params }: LessonPageProps) {
           </aside>
         </div>
       </main>
-    </div>
+    </>
   );
 }

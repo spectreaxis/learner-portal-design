@@ -1,6 +1,5 @@
 'use client';
 
-import { Sidebar } from '@/components/sidebar';
 import { Header } from '@/components/header';
 import { mockLearner } from '@/lib/course-data';
 import { User, Bell, Palette, Shield, LogOut, ChevronRight, Sun } from 'lucide-react';
@@ -45,14 +44,11 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <Sidebar />
-      
-      <main className="md:ml-[260px] transition-all duration-300">
-        <Header 
-          title="Settings"
-          subtitle="Manage your account and preferences"
-        />
+    <>
+      <Header
+        title="Settings"
+        subtitle="Manage your account and preferences"
+      />
         
         <div className="p-6 lg:p-8 max-w-3xl mx-auto">
           {/* Profile Card */}
@@ -153,7 +149,6 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
-      </main>
-    </div>
+    </>
   );
 }

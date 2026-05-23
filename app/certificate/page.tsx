@@ -1,6 +1,5 @@
 'use client';
 
-import { Sidebar } from '@/components/sidebar';
 import { Header } from '@/components/header';
 import { courseModules, mockLearner, getOverallProgress } from '@/lib/course-data';
 import { Award, Download, Share2, ExternalLink, Lock, CheckCircle2, GraduationCap, Shield } from 'lucide-react';
@@ -24,14 +23,11 @@ export default function CertificatePage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Sidebar />
-      
-      <main className="md:ml-[260px] transition-all duration-300">
-        <Header 
-          title="Certificate"
-          subtitle="IIAIC-verified certification"
-        />
+    <>
+      <Header
+        title="Certificate"
+        subtitle="IIAIC-verified certification"
+      />
         
         <div className="p-6 lg:p-8 max-w-5xl mx-auto">
           {/* Certificate Preview */}
@@ -255,7 +251,6 @@ export default function CertificatePage() {
             </div>
           </div>
         </div>
-      </main>
-    </div>
+    </>
   );
 }

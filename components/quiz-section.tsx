@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, memo, useMemo } from 'react';
 import { CheckCircle2, XCircle, ChevronRight, RotateCcw, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { QuizQuestion } from '@/lib/types';
@@ -11,7 +11,7 @@ interface QuizSectionProps {
   onComplete?: (score: number, maxScore: number) => void;
 }
 
-export function QuizSection({ title, questions, onComplete }: QuizSectionProps) {
+export const QuizSection = memo(function QuizSection({ title, questions, onComplete }: QuizSectionProps) {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
   const [showResults, setShowResults] = useState(false);
@@ -50,9 +50,13 @@ export function QuizSection({ title, questions, onComplete }: QuizSectionProps) 
     setSubmitted({});
   };
 
-  const score = questions.filter(q => 
-    selectedAnswers[q.id]?.toLowerCase() === q.answer.toLowerCase()
-  ).length;
+  // Memoize score calculation (currently recalculated on every render)
+  const score = useMemo(() =>
+    questions.filter(q =>
+      selectedAnswers[q.id]?.toLowerCase() === q.answer.toLowerCase()
+    ).length,
+    [questions, selectedAnswers]
+  );
 
   if (showResults) {
     const percentage = Math.round((score / questions.length) * 100);
@@ -255,4 +259,4 @@ export function QuizSection({ title, questions, onComplete }: QuizSectionProps) 
       </div>
     </div>
   );
-}
+});

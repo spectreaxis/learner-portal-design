@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { memo, useMemo, useCallback, useState } from 'react';
 import {
   LayoutDashboard,
   BookOpen,
@@ -13,26 +14,35 @@ import {
   GraduationCap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
 
-const navItems = [
+// Move outside component - static data (fixes performance issue)
+const NAV_ITEMS = [
   { href: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/learn', icon: BookOpen, label: 'Course' },
   { href: '/certificate', icon: Award, label: 'Certificate' },
   { href: '/settings', icon: Settings, label: 'Settings' },
-];
+] as const;
 
-export function Sidebar() {
+export const Sidebar = memo(function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
 
+  // Memoize toggle callback
+  const toggleCollapsed = useCallback(() => {
+    setCollapsed(prev => !prev);
+  }, []);
+
+  // Memoize container classes
+  const containerClasses = useMemo(
+    () => cn(
+      'fixed left-0 top-0 z-40 h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300 flex flex-col',
+      collapsed ? 'w-[72px]' : 'w-[260px]'
+    ),
+    [collapsed]
+  );
+
   return (
-    <aside
-      className={cn(
-        'fixed left-0 top-0 z-40 h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300 flex flex-col',
-        collapsed ? 'w-[72px]' : 'w-[260px]'
-      )}
-    >
+    <aside className={containerClasses}>
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 h-[72px] border-b border-sidebar-border">
         <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center flex-shrink-0 shadow-sm">
@@ -46,9 +56,9 @@ export function Sidebar() {
         )}
       </div>
 
-      {/* Navigation */}
+      {/* Navigation - memoized active state calculation */}
       <nav className="flex-1 px-3 py-6 space-y-1.5">
-        {navItems.map((item) => {
+        {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.href || 
             (item.href !== '/' && pathname.startsWith(item.href));
           return (
@@ -91,7 +101,7 @@ export function Sidebar() {
 
       {/* Collapse Toggle */}
       <button
-        onClick={() => setCollapsed(!collapsed)}
+        onClick={toggleCollapsed}
         className="flex items-center justify-center h-14 border-t border-sidebar-border text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all"
         aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
@@ -99,4 +109,4 @@ export function Sidebar() {
       </button>
     </aside>
   );
-}
+});
