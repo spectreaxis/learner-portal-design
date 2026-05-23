@@ -1,10 +1,38 @@
 'use client';
 
 import { Header } from '@/components/header';
-import { mockLearner } from '@/lib/course-data';
-import { User, Bell, Palette, Shield, LogOut, ChevronRight, Sun } from 'lucide-react';
+import { useSession, signOut } from 'next-auth/react';
+import { useLearnerProgress } from '@/lib/hooks/useLearner';
+import { User, Bell, Palette, Shield, LogOut, ChevronRight, Sun, Loader2 } from 'lucide-react';
 
 export default function SettingsPage() {
+  const { data: session } = useSession();
+  const { data: learnerData, isLoading } = useLearnerProgress();
+
+  const handleSignOut = async () => {
+    await signOut({ callbackUrl: '/login' });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading settings...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const completedLessons = learnerData?.progress?.filter((p: any) => p.completed).length || 0;
+  const currentStreak = learnerData?.currentStreak || 0;
+  const totalCertificates = learnerData?.certificates?.length || 0;
+  const passedQuizzes = learnerData?.quizSubmissions?.filter((q: any) => q.passed).length || 0;
+
+  const enrolledDate = learnerData?.enrolledAt
+    ? new Date(learnerData.enrolledAt)
+    : new Date();
+
   const settingsSections = [
     {
       title: 'Account',
@@ -49,7 +77,7 @@ export default function SettingsPage() {
         title="Settings"
         subtitle="Manage your account and preferences"
       />
-        
+
         <div className="p-6 lg:p-8 max-w-3xl mx-auto">
           {/* Profile Card */}
           <div className="p-6 rounded-2xl bg-card border border-border shadow-sm mb-8">
@@ -58,12 +86,12 @@ export default function SettingsPage() {
                 <User className="w-7 h-7 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="text-lg font-semibold text-foreground">{mockLearner.name}</h2>
-                <p className="text-sm text-muted-foreground">{mockLearner.email}</p>
+                <h2 className="text-lg font-semibold text-foreground">{session?.user?.name || 'User'}</h2>
+                <p className="text-sm text-muted-foreground">{session?.user?.email || ''}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Member since {mockLearner.enrolledAt.toLocaleDateString('en-GB', { 
-                    month: 'long', 
-                    year: 'numeric' 
+                  Member since {enrolledDate.toLocaleDateString('en-GB', {
+                    month: 'long',
+                    year: 'numeric'
                   })}
                 </p>
               </div>
@@ -118,10 +146,10 @@ export default function SettingsPage() {
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { label: 'Lessons Done', value: mockLearner.totalLessonsCompleted },
-                { label: 'Day Streak', value: mockLearner.currentStreak },
-                { label: 'Certificates', value: mockLearner.certificates.length },
-                { label: 'Quizzes Passed', value: 5 },
+                { label: 'Lessons Done', value: completedLessons },
+                { label: 'Day Streak', value: currentStreak },
+                { label: 'Certificates', value: totalCertificates },
+                { label: 'Quizzes Passed', value: passedQuizzes },
               ].map((stat) => (
                 <div key={stat.label} className="p-4 rounded-2xl bg-card border border-border shadow-sm text-center">
                   <p className="text-2xl font-bold text-foreground">{stat.value}</p>
@@ -137,7 +165,10 @@ export default function SettingsPage() {
               Session
             </h3>
             <div className="rounded-2xl bg-card border border-border shadow-sm overflow-hidden">
-              <button className="w-full flex items-center gap-4 p-4 hover:bg-destructive/5 transition-colors text-left">
+              <button
+                onClick={handleSignOut}
+                className="w-full flex items-center gap-4 p-4 hover:bg-destructive/5 transition-colors text-left"
+              >
                 <div className="w-11 h-11 rounded-xl bg-destructive/10 flex items-center justify-center flex-shrink-0">
                   <LogOut className="w-5 h-5 text-destructive" />
                 </div>

@@ -3,22 +3,50 @@
 import { Header } from '@/components/header';
 import { ProgressRing } from '@/components/progress';
 import { ModuleCard } from '@/components/module-card';
-import { courseModules, mockLearner, getModuleProgress, getOverallProgress } from '@/lib/course-data';
-import { BookOpen, Target, Award, Clock, Flame, ChevronRight, TrendingUp } from 'lucide-react';
+import { useModules } from '@/lib/hooks/useModules';
+import { useLearnerProgress } from '@/lib/hooks/useLearner';
+import { useSession } from 'next-auth/react';
+import { BookOpen, Target, Award, Clock, Flame, ChevronRight, TrendingUp, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function Dashboard() {
-  const overallProgress = getOverallProgress(mockLearner);
-  const currentModuleProgress = mockLearner.progress.find(p => !p.completed);
-  const currentModule = courseModules.find(m => m.id === currentModuleProgress?.moduleId);
+  const { data: session } = useSession();
+  const { data: modules = [], isLoading: modulesLoading } = useModules();
+  const { data: learnerData, isLoading: learnerLoading } = useLearnerProgress();
+
+  const isLoading = modulesLoading || learnerLoading;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate progress
+  const totalLessons = modules.reduce((acc, m) => acc + (m.lessons?.length || 0), 0);
+  const completedLessons = learnerData?.progress?.filter((p: any) => p.completed).length || 0;
+  const overallProgress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+
+  // Find current module (first incomplete)
+  const currentModuleProgress = learnerData?.progress?.find((p: any) => !p.completed);
+  const currentModule = modules.find(m => m.id === currentModuleProgress?.moduleId) || modules[0];
+
+  const firstName = session?.user?.name?.split(' ')[0] || 'there';
+  const totalCertificates = learnerData?.certificates?.length || 0;
+  const currentStreak = learnerData?.currentStreak || 0;
 
   return (
     <>
       <Header
-        title={`Welcome back, ${mockLearner.name.split(' ')[0]}`}
+        title={`Welcome back, ${firstName}`}
         subtitle="Continue your AI/ML learning journey"
       />
-        
+
         <div className="p-6 lg:p-8 max-w-7xl mx-auto">
           {/* Stats Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -40,7 +68,7 @@ export default function Dashboard() {
                   <BookOpen className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-foreground">{mockLearner.totalLessonsCompleted}</p>
+                  <p className="text-2xl font-bold text-foreground">{completedLessons}</p>
                   <p className="text-sm text-muted-foreground">Lessons Done</p>
                 </div>
               </div>
@@ -53,7 +81,7 @@ export default function Dashboard() {
                   <Flame className="w-5 h-5 text-warning" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-foreground">{mockLearner.currentStreak}</p>
+                  <p className="text-2xl font-bold text-foreground">{currentStreak}</p>
                   <p className="text-sm text-muted-foreground">Day Streak</p>
                 </div>
               </div>
@@ -66,7 +94,7 @@ export default function Dashboard() {
                   <Award className="w-5 h-5 text-gold" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-foreground">{mockLearner.certificates.length}</p>
+                  <p className="text-2xl font-bold text-foreground">{totalCertificates}</p>
                   <p className="text-sm text-muted-foreground">Certificates</p>
                 </div>
               </div>
@@ -100,7 +128,7 @@ export default function Dashboard() {
                         </span>
                         <span className="flex items-center gap-1.5">
                           <Target className="w-4 h-4" />
-                          {currentModule.lessons.length} lessons
+                          {currentModule.lessons?.length || 0} lessons
                         </span>
                       </div>
                     </div>
@@ -121,8 +149,8 @@ export default function Dashboard() {
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-semibold text-foreground">Course Modules</h2>
-              <Link 
-                href="/learn" 
+              <Link
+                href="/learn"
                 className="text-sm text-primary hover:text-primary/80 transition-colors flex items-center gap-1 font-medium"
               >
                 View all
@@ -130,10 +158,16 @@ export default function Dashboard() {
               </Link>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              {courseModules.slice(0, 4).map((module) => {
-                const progress = mockLearner.progress.find(p => p.moduleId === module.id);
-                const moduleProgress = getModuleProgress(module.id, mockLearner);
-                
+              {modules.slice(0, 4).map((module) => {
+                const progress = learnerData?.progress?.find((p: any) => p.moduleId === module.id);
+                const moduleLessons = module.lessons?.length || 0;
+                const completedInModule = learnerData?.progress?.filter(
+                  (p: any) => p.moduleId === module.id && p.completed
+                ).length || 0;
+                const moduleProgress = moduleLessons > 0
+                  ? Math.round((completedInModule / moduleLessons) * 100)
+                  : 0;
+
                 return (
                   <ModuleCard
                     key={module.id}
@@ -148,14 +182,14 @@ export default function Dashboard() {
           </div>
 
           {/* Learning Objectives Preview */}
-          {currentModule && (
+          {currentModule && (currentModule as any).learningObjectives && (
             <div>
               <h2 className="text-base font-semibold text-foreground mb-4">
                 What You&apos;ll Learn in Module {currentModule.number}
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {currentModule.learningObjectives.slice(0, 4).map((objective, index) => (
-                  <div 
+                {(currentModule as any).learningObjectives.slice(0, 4).map((objective: string, index: number) => (
+                  <div
                     key={index}
                     className="flex items-start gap-3 p-4 rounded-xl bg-card border border-border shadow-sm"
                   >

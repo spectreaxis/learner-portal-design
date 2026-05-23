@@ -1,13 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
 import { apiClient } from '../api-client';
 
 export function useLearnerProgress() {
+  const { data: session, status } = useSession();
+
   return useQuery({
     queryKey: ['learner', 'progress'],
     queryFn: async () => {
       const { data } = await apiClient.get('/learner/progress');
       return data;
     },
+    enabled: status === 'authenticated', // Only fetch when authenticated
   });
 }
 

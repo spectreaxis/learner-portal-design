@@ -1,10 +1,23 @@
 'use client';
 
 import { memo, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { Lightbulb } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Lesson } from '@/lib/types';
-import { VideoPlayer } from './video-player';
+
+// Code splitting: Lazy load VideoPlayer (YouTube embed - heavy)
+const VideoPlayer = dynamic(
+  () => import('./video-player').then(mod => ({ default: mod.VideoPlayer })),
+  {
+    loading: () => (
+      <div className="aspect-video bg-muted animate-pulse rounded-2xl flex items-center justify-center">
+        <div className="text-sm text-muted-foreground">Loading video...</div>
+      </div>
+    ),
+    ssr: false,
+  }
+);
 
 interface LessonContentProps {
   lesson: Lesson;

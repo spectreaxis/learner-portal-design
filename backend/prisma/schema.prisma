@@ -1,0 +1,136 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Core course data
+model Module {
+  id                  String   @id @default(cuid())
+  number              Int      @unique
+  title               String
+  subtitle            String
+  level               String
+  estimatedTime       String
+  description         String
+  learningObjectives  String[]
+  lessons             Lesson[]
+  quizzes             Quiz[]
+  activities          Activity[]
+  certifications      Certification[]
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([number])
+}
+
+model Lesson {
+  id          String   @id @default(cuid())
+  moduleId    String
+  module      Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  order       Int
+  title       String
+  content     Json     // Store as JSON for flexibility
+  keyInsight  String?
+  video       Json?    // VideoLesson data
+  progress    LessonProgress[]
+
+  @@unique([moduleId, order])
+  @@index([moduleId, order])
+}
+
+model Quiz {
+  id          String   @id @default(cuid())
+  moduleId    String
+  module      Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  title       String
+  questions   Json     // Array of QuizQuestion
+  type        String   // 'self-check' | 'certification'
+  submissions QuizSubmission[]
+
+  @@index([moduleId, type])
+}
+
+// User/Learner data
+model Learner {
+  id                    String   @id @default(cuid())
+  email                 String   @unique
+  password              String   // Hashed
+  name                  String
+  avatar                String?
+  enrolledAt            DateTime @default(now())
+  currentStreak         Int      @default(0)
+  lastActivityAt        DateTime @default(now())
+
+  progress              LessonProgress[]
+  quizSubmissions       QuizSubmission[]
+  certificates          Certificate[]
+
+  @@index([email])
+}
+
+model LessonProgress {
+  id              String   @id @default(cuid())
+  learnerId       String
+  learner         Learner  @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  lessonId        String
+  lesson          Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  completed       Boolean  @default(false)
+  completedAt     DateTime?
+  timeSpent       Int?     // seconds
+
+  @@unique([learnerId, lessonId])
+  @@index([learnerId])
+  @@index([lessonId])
+}
+
+model QuizSubmission {
+  id              String   @id @default(cuid())
+  learnerId       String
+  learner         Learner  @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  quizId          String
+  quiz            Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  answers         Json     // Record<questionId, answer>
+  score           Int
+  maxScore        Int
+  passed          Boolean
+  submittedAt     DateTime @default(now())
+
+  @@index([learnerId, quizId])
+  @@index([submittedAt])
+}
+
+model Certificate {
+  id              String   @id @default(cuid())
+  learnerId       String
+  learner         Learner  @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  moduleId        String
+  certificateId   String   @unique // Public-facing ID
+  earnedAt        DateTime @default(now())
+  verificationUrl String?
+
+  @@unique([learnerId, moduleId])
+  @@index([certificateId])
+  @@index([learnerId])
+}
+
+model Activity {
+  id              String   @id @default(cuid())
+  moduleId        String
+  module          Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  title           String
+  description     String
+  content         Json
+}
+
+model Certification {
+  id              String   @id @default(cuid())
+  moduleId        String
+  module          Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  title           String
+  requiredScore   Int
+  content         Json
+}

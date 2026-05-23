@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { memo, useMemo, useCallback, useState } from 'react';
+import { useLearnerProgress } from '@/lib/hooks/useLearner';
 import {
   LayoutDashboard,
   BookOpen,
@@ -26,6 +27,9 @@ const NAV_ITEMS = [
 export const Sidebar = memo(function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const { data: learnerData } = useLearnerProgress();
+
+  const currentStreak = learnerData?.currentStreak || 0;
 
   // Memoize toggle callback
   const toggleCollapsed = useCallback(() => {
@@ -85,14 +89,14 @@ export const Sidebar = memo(function Sidebar() {
       </nav>
 
       {/* Streak Card */}
-      {!collapsed && (
+      {!collapsed && currentStreak > 0 && (
         <div className="mx-3 mb-4 p-4 rounded-xl bg-gradient-to-br from-warning/10 to-warning/5 border border-warning/20">
           <div className="flex items-center gap-2.5 mb-1.5">
             <div className="w-8 h-8 rounded-lg bg-warning/20 flex items-center justify-center">
               <Flame className="w-4 h-4 text-warning" />
             </div>
             <div>
-              <span className="text-sm font-semibold text-foreground">7 day streak</span>
+              <span className="text-sm font-semibold text-foreground">{currentStreak} day streak</span>
               <p className="text-xs text-muted-foreground">Keep it going!</p>
             </div>
           </div>

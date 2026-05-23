@@ -2,7 +2,7 @@
 
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
-import { Sidebar } from '@/components/sidebar'
+import { AuthLayout } from '@/components/auth-layout'
 import { Providers } from './providers'
 import './globals.css'
 
@@ -18,15 +18,9 @@ export default function RootLayout({
     <html lang="en" className="bg-background">
       <body className={`${geist.className} font-sans antialiased min-h-screen bg-background text-foreground`}>
         <Providers>
-          <div className="flex min-h-screen">
-            {/* Single Sidebar instance for entire app */}
-            <Sidebar />
-
-            {/* Main content area with responsive margin */}
-            <main className="flex-1 md:ml-[260px]">
-              {children}
-            </main>
-          </div>
+          <AuthLayout>
+            {children}
+          </AuthLayout>
           {process.env.NODE_ENV === 'production' && <Analytics />}
         </Providers>
       </body>
