@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, memo, useMemo } from 'react';
+import { useState, memo, useMemo, useEffect } from 'react';
 import { CheckCircle2, XCircle, ChevronRight, RotateCcw, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { QuizQuestion } from '@/lib/types';
+import { saveQuizProgress, getQuizProgress } from '@/lib/storage';
 
 interface QuizSectionProps {
   title: string;
@@ -16,6 +17,28 @@ export const QuizSection = memo(function QuizSection({ title, questions, onCompl
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
   const [showResults, setShowResults] = useState(false);
   const [submitted, setSubmitted] = useState<Record<string, boolean>>({});
+
+  // Memoize score calculation
+  const score = useMemo(() =>
+    questions.filter(q =>
+      selectedAnswers[q.id]?.toLowerCase() === q.answer.toLowerCase()
+    ).length,
+    [questions, selectedAnswers]
+  );
+
+  // Load from storage on mount
+  useEffect(() => {
+    const saved = getQuizProgress()[title];
+    if (saved) {
+      setSelectedAnswers(saved.selectedAnswers);
+      setSubmitted(saved.submitted);
+    }
+  }, [title]);
+
+  // Save on change
+  useEffect(() => {
+    saveQuizProgress(title, { selectedAnswers, submitted, score });
+  }, [selectedAnswers, submitted, score, title]);
 
   const question = questions[currentQuestion];
   const isAnswered = submitted[question.id];
@@ -36,9 +59,6 @@ export const QuizSection = memo(function QuizSection({ title, questions, onCompl
       setCurrentQuestion(prev => prev + 1);
     } else {
       setShowResults(true);
-      const score = questions.filter(q => 
-        selectedAnswers[q.id]?.toLowerCase() === q.answer.toLowerCase()
-      ).length;
       onComplete?.(score, questions.length);
     }
   };
@@ -49,14 +69,6 @@ export const QuizSection = memo(function QuizSection({ title, questions, onCompl
     setShowResults(false);
     setSubmitted({});
   };
-
-  // Memoize score calculation (currently recalculated on every render)
-  const score = useMemo(() =>
-    questions.filter(q =>
-      selectedAnswers[q.id]?.toLowerCase() === q.answer.toLowerCase()
-    ).length,
-    [questions, selectedAnswers]
-  );
 
   if (showResults) {
     const percentage = Math.round((score / questions.length) * 100);
