@@ -1,0 +1,24 @@
+# Render Blueprint - Auto-deploy configuration
+# This file enables one-click deployment to Render
+# https://render.com/docs/blueprint-spec
+
+services:
+  # Backend Express API
+  - type: web
+    name: learner-portal-backend
+    runtime: node
+    region: oregon  # Change to: oregon, ohio, frankfurt, singapore
+    plan: free
+    rootDir: backend
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false  # Set manually in Render dashboard
+      - key: JWT_SECRET
+        sync: false  # Set manually in Render dashboard
+      - key: FRONTEND_URL
+        sync: false  # Set manually in Render dashboard
