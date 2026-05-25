@@ -152,7 +152,7 @@ export default function SettingsPage() {
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-1">{section.title}</h3>
             <div className="rounded-2xl bg-card border border-border shadow-sm divide-y divide-border overflow-hidden">
               {section.items.map((item) => (
-                <div key={item.label} onClick={item.onClick} className="flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors cursor-pointer">
+                <div key={item.label} onClick={(item as any).onClick} className="flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors cursor-pointer">
                   <div className="w-11 h-11 rounded-xl bg-muted/50 flex items-center justify-center flex-shrink-0">
                     <item.icon className="w-5 h-5 text-muted-foreground" />
                   </div>
@@ -160,7 +160,7 @@ export default function SettingsPage() {
                     <p className="font-medium text-foreground">{item.label}</p>
                     <p className="text-sm text-muted-foreground truncate">{item.description}</p>
                   </div>
-                  {item.isToggle ? (
+                  {(item as any).isToggle ? (
                     <div className="flex items-center gap-2">
                       <Sun className="w-4 h-4 text-warning" />
                       <div className="w-11 h-6 rounded-full bg-primary/20 p-1"><div className="w-4 h-4 rounded-full bg-primary transition-transform" /></div>
