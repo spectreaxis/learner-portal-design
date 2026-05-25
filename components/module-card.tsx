@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, Clock, ChevronRight, CheckCircle2, Circle, PlayCircle, Sparkles } from 'lucide-react';
+import { BookOpen, Clock, ChevronRight, CheckCircle2, Circle, PlayCircle, Sparkles, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Module } from '@/lib/types';
 import { ProgressBar } from './progress';
@@ -11,10 +11,11 @@ interface ModuleCardProps {
   progress: number;
   currentLessonId?: string;
   isActive?: boolean;
+  isLocked?: boolean;
 }
 
-export function ModuleCard({ module, progress, currentLessonId, isActive }: ModuleCardProps) {
-  const currentLessonIndex = currentLessonId 
+export function ModuleCard({ module, progress, currentLessonId, isActive, isLocked }: ModuleCardProps) {
+  const currentLessonIndex = currentLessonId
     ? module.lessons.findIndex(l => l.id === currentLessonId)
     : 0;
   const completedLessons = currentLessonIndex;
@@ -22,7 +23,8 @@ export function ModuleCard({ module, progress, currentLessonId, isActive }: Modu
 
   return (
     <div className={cn(
-      'group p-5 rounded-2xl bg-card border transition-all duration-200 shadow-sm hover:shadow-md',
+      'group p-5 rounded-2xl bg-card border transition-all duration-200 shadow-sm',
+      isLocked ? 'opacity-60' : 'hover:shadow-md',
       isActive ? 'border-primary/30 ring-1 ring-primary/10' : 'border-border hover:border-primary/20'
     )}>
       {/* Header */}
@@ -30,9 +32,11 @@ export function ModuleCard({ module, progress, currentLessonId, isActive }: Modu
         <div className="flex items-center gap-3">
           <div className={cn(
             'w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors',
-            isCompleted ? 'bg-success/10' : isActive ? 'bg-primary/10' : 'bg-muted'
+            isLocked ? 'bg-muted' : isCompleted ? 'bg-success/10' : isActive ? 'bg-primary/10' : 'bg-muted'
           )}>
-            {isCompleted ? (
+            {isLocked ? (
+              <Lock className="w-5 h-5 text-muted-foreground" />
+            ) : isCompleted ? (
               <CheckCircle2 className="w-5 h-5 text-success" />
             ) : (
               <BookOpen className={cn(
@@ -48,13 +52,19 @@ export function ModuleCard({ module, progress, currentLessonId, isActive }: Modu
             <h3 className="font-semibold text-foreground line-clamp-1">{module.title}</h3>
           </div>
         </div>
-        {isActive && (
+        {isLocked && (
+          <span className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-muted text-muted-foreground rounded-full">
+            <Lock className="w-3 h-3" />
+            Locked
+          </span>
+        )}
+        {!isLocked && isActive && (
           <span className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-primary/10 text-primary rounded-full">
             <Sparkles className="w-3 h-3" />
             Active
           </span>
         )}
-        {isCompleted && (
+        {!isLocked && isCompleted && (
           <span className="px-2.5 py-1 text-xs font-medium bg-success/10 text-success rounded-full">
             Completed
           </span>
@@ -90,20 +100,29 @@ export function ModuleCard({ module, progress, currentLessonId, isActive }: Modu
       </div>
 
       {/* CTA */}
-      <Link
-        href={`/learn/${module.id}`}
-        className={cn(
-          'flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium transition-all',
-          isActive
-            ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm'
-            : isCompleted
-            ? 'bg-success/10 text-success hover:bg-success/20'
-            : 'bg-muted text-foreground hover:bg-muted/80'
-        )}
-      >
-        {isCompleted ? 'Review Module' : progress > 0 ? 'Continue Learning' : 'Start Module'}
-        <ChevronRight className="w-4 h-4" />
-      </Link>
+      {isLocked ? (
+        <div
+          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium bg-muted text-muted-foreground cursor-not-allowed"
+        >
+          <Lock className="w-4 h-4" />
+          Complete Module {module.number - 1} First
+        </div>
+      ) : (
+        <Link
+          href={`/learn/${module.id}`}
+          className={cn(
+            'flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium transition-all',
+            isActive
+              ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm'
+              : isCompleted
+              ? 'bg-success/10 text-success hover:bg-success/20'
+              : 'bg-muted text-foreground hover:bg-muted/80'
+          )}
+        >
+          {isCompleted ? 'Review Module' : progress > 0 ? 'Continue Learning' : 'Start Module'}
+          <ChevronRight className="w-4 h-4" />
+        </Link>
+      )}
     </div>
   );
 }

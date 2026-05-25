@@ -79,7 +79,7 @@ export const QuizSection = memo(function QuizSection({ title, questions, quizId,
 
           // Redirect to certificate page after a brief celebration
           setTimeout(() => {
-            router.push(`/certificate/${result.certificate.certificateId}`);
+            router.push('/certificate');
           }, 2000);
         } else {
           onComplete?.(score, questions.length);

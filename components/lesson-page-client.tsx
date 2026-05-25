@@ -395,13 +395,32 @@ export function LessonPageClient({
                     )}
                   </button>
                 ) : (
-                  <Link
-                    href="/certificate"
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gold text-gold-foreground text-sm font-medium hover:bg-gold/90 transition-all shadow-sm"
+                  <button
+                    onClick={async () => {
+                      // Mark final lesson complete
+                      await updateProgressMutation.mutateAsync({
+                        lessonId: lesson.id,
+                        completed: true
+                      });
+
+                      // Navigate to certificate page
+                      router.push('/certificate');
+                    }}
+                    disabled={updateProgressMutation.isPending}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gold text-gold-foreground text-sm font-medium hover:bg-gold/90 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Award className="w-4 h-4" />
-                    <span>Get Certificate</span>
-                  </Link>
+                    {updateProgressMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Award className="w-4 h-4" />
+                        <span>Complete & Get Certificate</span>
+                      </>
+                    )}
+                  </button>
                 )}
               </div>
             </div>

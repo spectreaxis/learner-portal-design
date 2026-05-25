@@ -1,4 +1,4 @@
-import { Module, Learner } from './types';
+import { Module } from './types';
 
 export const courseModules: Module[] = [
   {
@@ -425,6 +425,7 @@ export const courseModules: Module[] = [
     ],
     selfCheckQuizzes: [
       {
+        id: 'quiz-m2-1',
         title: 'Self-Check Quiz 1 (Lessons 1–3)',
         questions: [
           {
@@ -463,6 +464,7 @@ export const courseModules: Module[] = [
         ]
       },
       {
+        id: 'quiz-m2-2',
         title: 'Self-Check Quiz 2 (Lessons 4–5)',
         questions: [
           {
@@ -501,6 +503,7 @@ export const courseModules: Module[] = [
         ]
       },
       {
+        id: 'quiz-m2-3',
         title: 'Self-Check Quiz 3 (Lesson 6)',
         questions: [
           {
@@ -527,6 +530,7 @@ export const courseModules: Module[] = [
       }
     ],
     handsOnActivity: {
+      id: 'activity-m2-regression',
       title: 'Build a Regression Model in Google Sheets',
       description: 'You\'re going to build a simple linear regression model using a real dataset directly in Google Sheets — visualise it, make predictions with it, and explore what happens when you add more data.',
       whatYouNeed: [
@@ -553,6 +557,7 @@ export const courseModules: Module[] = [
       ]
     },
     certificationAssessment: {
+      id: 'cert-m2',
       questions: [
         {
           id: 'cert-2-1',
@@ -622,50 +627,3 @@ export const courseModules: Module[] = [
     ]
   }
 ];
-
-export const mockLearner: Learner = {
-  id: 'learner-001',
-  name: 'Alex Chen',
-  email: 'alex.chen@example.com',
-  enrolledAt: new Date('2024-01-15'),
-  currentStreak: 7,
-  totalLessonsCompleted: 8,
-  progress: [
-    {
-      moduleId: 'module-1',
-      lessonId: 'lesson-1-5',
-      completed: false,
-      quizScores: [
-        { quizId: 'quiz-1-1', score: 3, maxScore: 3 },
-        { quizId: 'quiz-1-2', score: 2, maxScore: 3 }
-      ],
-      certificationPassed: false
-    },
-    {
-      moduleId: 'module-2',
-      lessonId: 'lesson-2-1',
-      completed: false,
-      quizScores: [],
-      certificationPassed: false
-    }
-  ],
-  certificates: []
-};
-
-export function getModuleProgress(moduleId: string, learner: Learner): number {
-  const module = courseModules.find(m => m.id === moduleId);
-  if (!module) return 0;
-  
-  const progress = learner.progress.find(p => p.moduleId === moduleId);
-  if (!progress) return 0;
-  
-  const currentLessonIndex = module.lessons.findIndex(l => l.id === progress.lessonId);
-  if (currentLessonIndex === -1) return 0;
-  
-  return Math.round((currentLessonIndex / module.lessons.length) * 100);
-}
-
-export function getOverallProgress(learner: Learner): number {
-  const totalLessons = courseModules.reduce((acc, m) => acc + m.lessons.length, 0);
-  return Math.round((learner.totalLessonsCompleted / totalLessons) * 100);
-}

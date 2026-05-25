@@ -162,11 +162,16 @@ export default function Dashboard() {
                 const progress = learnerData?.progress?.find((p: any) => p.moduleId === module.id);
                 const moduleLessons = module.lessons?.length || 0;
                 const completedInModule = learnerData?.progress?.filter(
-                  (p: any) => p.moduleId === module.id && p.completed
+                  (p: any) => p.lesson?.moduleId === module.id && p.completed
                 ).length || 0;
                 const moduleProgress = moduleLessons > 0
                   ? Math.round((completedInModule / moduleLessons) * 100)
                   : 0;
+
+                // Check if module is locked (Module 2+ requires previous module certificate)
+                const isLocked = module.number > 1 && !learnerData?.certificates?.some(
+                  (cert: any) => cert.module?.number === module.number - 1
+                );
 
                 return (
                   <ModuleCard
@@ -175,6 +180,7 @@ export default function Dashboard() {
                     progress={moduleProgress}
                     currentLessonId={progress?.lessonId}
                     isActive={module.id === currentModuleProgress?.moduleId}
+                    isLocked={isLocked}
                   />
                 );
               })}

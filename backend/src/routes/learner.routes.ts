@@ -23,7 +23,11 @@ router.get('/progress', async (req: AuthRequest, res) => {
           orderBy: { submittedAt: 'desc' },
           take: 10,
         },
-        certificates: true,
+        certificates: {
+          include: {
+            module: true, // Include module data for locking logic
+          },
+        },
       },
     });
 
@@ -71,77 +75,104 @@ router.post('/progress', async (req: AuthRequest, res) => {
   }
 });
 
-// Submit quiz
+// Submit quiz or certification
 router.post('/quizzes', async (req: AuthRequest, res) => {
   try {
     const { quizId, answers } = req.body;
 
-    // Get quiz with module info
-    const quiz = await prisma.quiz.findUnique({
+    // Try Quiz table first
+    let quiz = await prisma.quiz.findUnique({
       where: { id: quizId },
       include: { module: true }
     });
 
+    // If not found, try Certification table
+    let certification = null;
+    let isCertification = false;
     if (!quiz) {
-      return res.status(404).json({ error: 'Quiz not found' });
+      certification = await prisma.certification.findUnique({
+        where: { id: quizId },
+        include: { module: true }
+      });
+
+      if (!certification) {
+        return res.status(404).json({ error: 'Quiz or certification not found' });
+      }
+      isCertification = true;
     }
 
+    // Get questions and module info
+    const questions = isCertification
+      ? (certification!.content as any).questions
+      : (quiz!.questions as any[]);
+    const moduleId = isCertification ? certification!.moduleId : quiz!.moduleId;
+    const module = isCertification ? certification!.module : quiz!.module;
+
     // Calculate score
-    const questions = quiz.questions as any[];
     let score = 0;
-    questions.forEach((q) => {
+    questions.forEach((q: any) => {
       if (answers[q.id]?.toLowerCase() === q.answer.toLowerCase()) {
         score++;
       }
     });
 
     const percentage = Math.round((score / questions.length) * 100);
-    const passed = score >= (questions.length * 0.7); // 70% passing
+    const requiredScore = isCertification ? certification!.requiredScore : 70;
+    const passed = percentage >= requiredScore;
+
+    const submissionData: any = {
+      learner: {
+        connect: { id: req.userId! }
+      },
+      answers,
+      score,
+      maxScore: questions.length,
+      passed,
+    };
+
+    if (isCertification) {
+      submissionData.certification = { connect: { id: quizId } };
+    } else {
+      submissionData.quiz = { connect: { id: quizId } };
+    }
 
     const submission = await prisma.quizSubmission.create({
-      data: {
-        learnerId: req.userId!,
-        quizId,
-        answers,
-        score,
-        maxScore: questions.length,
-        passed,
-      },
+      data: submissionData,
     });
 
-    // Certificate generation for certification quizzes with 80%+ score
-    let certificate = null;
-    if (quiz.type === 'certification' && percentage >= 80) {
+    // Certificate generation for passing certification assessments
+    let certificateRecord = null;
+    if (isCertification && passed) {
       // Check if certificate already exists
       const existingCert = await prisma.certificate.findUnique({
         where: {
           learnerId_moduleId: {
             learnerId: req.userId!,
-            moduleId: quiz.moduleId
+            moduleId: moduleId
           }
         }
       });
 
       if (!existingCert) {
         // Generate unique certificate ID
-        const moduleNumber = quiz.module.number;
+        const moduleNumber = module.number;
         const timestamp = Date.now().toString(36).toUpperCase();
         const certificateId = `IIAIC-M${moduleNumber}-${timestamp}`;
 
-        certificate = await prisma.certificate.create({
+        certificateRecord = await prisma.certificate.create({
           data: {
             learnerId: req.userId!,
-            moduleId: quiz.moduleId,
+            moduleId: moduleId,
             certificateId,
             verificationUrl: `${process.env.APP_URL || 'http://localhost:3000'}/certificate/${certificateId}`
           }
         });
       } else {
-        certificate = existingCert;
+        certificateRecord = existingCert;
       }
     }
 
-    res.json({ submission, certificate });
+    res.json({ submission, certificate: certificateRecord });
   } catch (error) {
     console.error('Quiz submission error:', error);
     res.status(500).json({ error: 'Failed to submit quiz' });

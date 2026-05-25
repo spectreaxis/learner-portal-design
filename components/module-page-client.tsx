@@ -3,9 +3,11 @@
 import Link from 'next/link';
 import { LessonListItem } from '@/components/module-card';
 import { ProgressBar } from '@/components/progress';
+import { ModuleLockBanner } from '@/components/module-lock-banner';
 import { ChevronRight, Clock, Target, BookOpen, CheckCircle2, Lightbulb, Sparkles, Loader2 } from 'lucide-react';
 import type { Module } from '@/lib/types';
 import { useLearnerProgress } from '@/lib/hooks/useLearner';
+import { useModuleAccess } from '@/lib/hooks/useModuleAccess';
 
 interface ModulePageClientProps {
   module: Module;
@@ -14,6 +16,7 @@ interface ModulePageClientProps {
 
 export function ModulePageClient({ module, moduleId }: ModulePageClientProps) {
   const { data: learnerData, isLoading } = useLearnerProgress();
+  const moduleAccess = useModuleAccess(module.number);
 
   // Calculate real progress
   const progressInModule = learnerData?.progress?.filter(
@@ -22,6 +25,11 @@ export function ModulePageClient({ module, moduleId }: ModulePageClientProps) {
 
   const currentLessonIndex = progressInModule.length;
   const moduleProgress = Math.round((currentLessonIndex / (module.lessons?.length || 1)) * 100);
+
+  // Check if module has a certificate
+  const hasCertificate = learnerData?.certificates?.some(
+    (cert: any) => cert.moduleId === moduleId
+  );
 
   if (isLoading) {
     return (
@@ -35,6 +43,14 @@ export function ModulePageClient({ module, moduleId }: ModulePageClientProps) {
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+      {/* Module Lock Banner */}
+      <ModuleLockBanner
+        isLocked={moduleAccess.isLocked}
+        reason={moduleAccess.reason}
+        previousModuleNumber={module.number - 1}
+        previousModuleProgress={moduleAccess.previousModuleProgress}
+        hasPreviousCertificate={moduleAccess.hasPreviousCertificate}
+      />
       {/* Module Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-8">
         {/* Main Info */}
@@ -125,7 +141,9 @@ export function ModulePageClient({ module, moduleId }: ModulePageClientProps) {
       {module.lessons && module.lessons.length > 0 && (
         <div className="mb-8">
           <h2 className="text-base font-semibold text-foreground mb-4">Lessons</h2>
-          <div className="rounded-2xl bg-card border border-border shadow-sm overflow-hidden divide-y divide-border">
+          <div className={`rounded-2xl bg-card border border-border shadow-sm overflow-hidden divide-y divide-border ${
+            moduleAccess.isLocked ? 'opacity-50 pointer-events-none' : ''
+          }`}>
             {module.lessons.map((lesson, index) => (
               <LessonListItem
                 key={lesson.id}
