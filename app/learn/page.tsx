@@ -1,32 +1,35 @@
+'use client';
+
 import { Header } from '@/components/header';
 import { ModuleCard } from '@/components/module-card';
-import { Award, Clock, BookOpen, Target } from 'lucide-react';
-import type { Module } from '@/lib/types';
+import { Award, Clock, BookOpen, Target, Loader2 } from 'lucide-react';
+import { useModules } from '@/lib/hooks/useModules';
+import { useLearnerProgress } from '@/lib/hooks/useLearner';
 
-// Enable ISR with 24-hour revalidation
-export const revalidate = 86400;
+export default function LearnPage() {
+  const { data: modules = [], isLoading: modulesLoading } = useModules();
+  const { data: learnerData, isLoading: learnerLoading } = useLearnerProgress();
 
-async function getModules(): Promise<Module[]> {
-  try {
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
-    const res = await fetch(`${API_URL}/modules`, {
-      next: { revalidate: 86400 }, // 24 hours
-    });
+  const isLoading = modulesLoading || learnerLoading;
 
-    if (!res.ok) {
-      throw new Error('Failed to fetch modules');
-    }
-
-    return res.json();
-  } catch (error) {
-    console.error('Error fetching modules:', error);
-    // Return empty array as fallback
-    return [];
+  if (isLoading) {
+    return (
+      <>
+        <Header
+          title="Course Overview"
+          subtitle="IIAIC Basic AI/ML Literacy Course"
+        />
+        <div className="flex items-center justify-center py-32">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading course...</p>
+          </div>
+        </div>
+      </>
+    );
   }
-}
 
-export default async function LearnPage() {
-  const modules = await getModules();
+  const totalLessons = modules.reduce((acc, m) => acc + (m.lessons?.length || 0), 0);
 
   return (
     <>
@@ -53,9 +56,7 @@ export default async function LearnPage() {
             </div>
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-muted/50 border border-border">
               <Target className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">
-                {modules.reduce((acc, m) => acc + (m.lessons?.length || 0), 0)} Lessons
-              </span>
+              <span className="text-sm text-muted-foreground">{totalLessons} Lessons</span>
             </div>
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-muted/50 border border-border">
               <Clock className="w-4 h-4 text-muted-foreground" />
@@ -71,15 +72,36 @@ export default async function LearnPage() {
         {/* Modules Grid */}
         <h2 className="text-base font-semibold text-foreground mb-4">All Modules</h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-8">
-          {modules.map((module) => (
-            <ModuleCard
-              key={module.id}
-              module={module}
-              progress={0}
-              currentLessonId={undefined}
-              isActive={false}
-            />
-          ))}
+          {modules.map((module) => {
+            const moduleLessons = module.lessons?.length || 0;
+            const completedInModule = learnerData?.progress?.filter(
+              (p: any) => p.lesson?.moduleId === module.id && p.completed
+            ).length || 0;
+            const moduleProgress = moduleLessons > 0
+              ? Math.round((completedInModule / moduleLessons) * 100)
+              : 0;
+
+            // Check if module is locked
+            const isLocked = module.number > 1 && !learnerData?.certificates?.some(
+              (cert: any) => cert.module?.number === module.number - 1
+            );
+
+            // Find current lesson
+            const currentLessonProgress = learnerData?.progress?.find(
+              (p: any) => p.lesson?.moduleId === module.id && !p.completed
+            );
+
+            return (
+              <ModuleCard
+                key={module.id}
+                module={module}
+                progress={moduleProgress}
+                currentLessonId={currentLessonProgress?.lessonId}
+                isActive={moduleProgress > 0 && moduleProgress < 100}
+                isLocked={isLocked}
+              />
+            );
+          })}
         </div>
 
         {/* Course Completion Info */}
