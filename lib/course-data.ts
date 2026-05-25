@@ -116,6 +116,7 @@ export const courseModules: Module[] = [
     ],
     selfCheckQuizzes: [
       {
+        id: 'quiz-m1-sc1',
         title: 'Self-Check Quiz 1 (Lessons 1–3)',
         questions: [
           {
@@ -154,6 +155,7 @@ export const courseModules: Module[] = [
         ]
       },
       {
+        id: 'quiz-m1-sc2',
         title: 'Self-Check Quiz 2 (Lessons 4–5)',
         questions: [
           {
@@ -193,6 +195,7 @@ export const courseModules: Module[] = [
       }
     ],
     handsOnActivity: {
+      id: 'activity-m1-teachable',
       title: 'Train Your First AI in 15 Minutes',
       description: 'You\'re going to train a real image-recognition AI model — no coding required — using Google\'s free Teachable Machine tool. Your AI will learn to distinguish between two things you choose.',
       whatYouNeed: [
@@ -215,6 +218,7 @@ export const courseModules: Module[] = [
       ]
     },
     certificationAssessment: {
+      id: 'cert-m1',
       questions: [
         {
           id: 'cert-1-1',

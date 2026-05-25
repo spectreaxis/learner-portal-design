@@ -33,8 +33,9 @@ export interface Module {
   description: string;
   learningObjectives: string[];
   lessons: Lesson[];
-  selfCheckQuizzes: { title: string; questions: QuizQuestion[] }[];
+  selfCheckQuizzes: { id: string; title: string; questions: QuizQuestion[] }[];
   handsOnActivity?: {
+    id: string;
     title: string;
     description: string;
     whatYouNeed: string[];
@@ -42,6 +43,7 @@ export interface Module {
     reflections?: string[];
   };
   certificationAssessment: {
+    id: string;
     questions: QuizQuestion[];
   };
   keyTakeaways: string[];

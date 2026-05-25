@@ -61,11 +61,64 @@ async function main() {
             duration: '~5 minutes',
             description: 'Explains how machines learn from data using everyday analogies.'
           }
+        },
+        {
+          order: 3,
+          title: 'Key Vocabulary (Plain English Edition)',
+          content: [
+            'You only need six terms to understand most conversations about ML:',
+            '**Dataset**: A collection of examples the machine learns from. Example: All the emails labelled spam or not spam.',
+            '**Feature**: A measurable property of each example. Example: The number of exclamation marks in an email.',
+            '**Label**: The answer you want the model to predict. Example: "Spam" or "not spam".',
+            '**Training**: The process of the machine learning from the dataset. Example: Feeding the 10,000 emails to the algorithm.',
+            '**Model**: The output of training — the learned patterns. Example: The finished spam detector.',
+            '**Prediction**: What the model outputs for a new, unseen example. Example: "This new email is probably spam".'
+          ],
+          keyInsight: 'Think of it this way: Training is studying. The model is your brain after studying. A prediction is answering a question on an exam you\'ve never seen before.'
+        },
+        {
+          order: 4,
+          title: 'Two Main Flavours of Machine Learning',
+          content: [
+            '**Supervised Learning — "Learning with an Answer Key"**',
+            'The most common type. The training data has both examples and correct answers (labels). The machine learns to map examples to answers.',
+            'Examples: Spam filtering (Emails + spam/not-spam labels), Image recognition (Photos + labels like "cat," "dog," "car"), House price prediction (House features + actual prices).',
+            '**Unsupervised Learning — "Finding Patterns Without an Answer Key"**',
+            'Here, the data has no labels. The machine looks for natural groupings or patterns on its own.',
+            'Examples: Customer segmentation (finding natural clusters like "bargain hunters," "brand loyalists"), Anomaly detection (finding unusual activity in bank transactions).'
+          ],
+          keyInsight: 'Supervised = "I\'ll tell you the answers, you learn the patterns." Unsupervised = "Here\'s a pile of data, find the patterns yourself."'
+        },
+        {
+          order: 5,
+          title: 'AI and ML in Your Daily Life',
+          content: [
+            'You interact with AI/ML systems constantly, whether you know it or not:',
+            '**On your phone**: Face ID (image recognition), Fingerprint unlock (biometric pattern matching), Autocomplete/autocorrect (language model), Photo organisation by person or place (image clustering).',
+            '**Entertainment**: Spotify\'s "Discover Weekly" (recommendation system), Netflix\'s "Because you watched..." (same), YouTube\'s autoplay queue (engagement prediction).',
+            '**Email and messaging**: Gmail\'s spam filter (classification), Smart Reply suggestions (language generation).',
+            '**Shopping**: Amazon\'s "Customers also bought..." (recommendation), Dynamic pricing (demand predictions).',
+            '**Healthcare**: Detecting tumours in X-rays and scans (image recognition), Predicting patient deterioration (risk scoring).',
+            '**Navigation**: Google Maps ETA (regression/prediction), Traffic prediction (pattern recognition over time).',
+            'All of these are examples of narrow AI — each one does its specific job extremely well, but that\'s all it does.'
+          ]
+        },
+        {
+          order: 6,
+          title: 'Ethics Spotlight — A Brief but Important Note',
+          content: [
+            'You\'ve just learned how AI systems work. Before we wrap up, there\'s one thing every AI user should understand: AI is only as good — and as fair — as the data it was trained on.',
+            'A spam filter trained mostly on English-language emails may perform poorly on emails in other languages.',
+            'A face-recognition system trained primarily on photos of light-skinned faces may struggle with darker skin tones.',
+            'An autocomplete tool trained on text from one culture may suggest things that feel odd or inappropriate in another.',
+            'These aren\'t just technical problems — they can affect real people in real ways. Being aware of this is the first step to being a thoughtful user of AI.',
+            'When you encounter an AI system making odd or unfair-seeming decisions, the question to ask is: "What was this trained on, and whose experiences were included?"'
+          ]
         }
       ],
       quizzes: [
         {
-          title: 'Self-Check Quiz 1',
+          title: 'Self-Check Quiz 1 (Lessons 1–3)',
           type: 'self-check',
           questions: [
             {
@@ -87,6 +140,118 @@ async function main() {
               answer: 'False',
               explanation: 'The machine learns the rules from data; humans provide examples, not rules.',
               type: 'true-false'
+            },
+            {
+              id: 'q1-3',
+              question: 'What is the term for the data property used as input to an ML model? For example, the "square footage" of a house when predicting its price.',
+              options: [
+                { label: 'A', text: 'Label' },
+                { label: 'B', text: 'Model' },
+                { label: 'C', text: 'Feature' },
+                { label: 'D', text: 'Prediction' }
+              ],
+              answer: 'C',
+              explanation: 'A feature is a measurable input property',
+              type: 'multiple-choice'
+            }
+          ]
+        },
+        {
+          title: 'Self-Check Quiz 2 (Lessons 4–5)',
+          type: 'self-check',
+          questions: [
+            {
+              id: 'q2-1',
+              question: 'A music service groups its users into "classical lovers," "hip-hop fans," and "podcast listeners" without anyone pre-defining those categories. This is an example of:',
+              options: [
+                { label: 'A', text: 'Supervised learning' },
+                { label: 'B', text: 'Unsupervised learning' },
+                { label: 'C', text: 'General AI' },
+                { label: 'D', text: 'Hardcoded rules' }
+              ],
+              answer: 'B',
+              explanation: 'No labels were provided, so the algorithm found natural groupings',
+              type: 'multiple-choice'
+            },
+            {
+              id: 'q2-2',
+              question: 'The AI that recommends your next Netflix show is an example of General AI.',
+              answer: 'False',
+              explanation: 'Netflix\'s recommendation system is narrow AI, designed specifically for that task.',
+              type: 'true-false'
+            },
+            {
+              id: 'q2-3',
+              question: 'Which of the following is NOT an example of ML being used in everyday life?',
+              options: [
+                { label: 'A', text: 'A spam filter in your email' },
+                { label: 'B', text: 'A light switch turning on when you flip it' },
+                { label: 'C', text: 'A map app predicting your drive time' },
+                { label: 'D', text: 'Autocomplete on your phone keyboard' }
+              ],
+              answer: 'B',
+              explanation: 'A light switch follows a hardcoded rule (flip = on), with no learning involved',
+              type: 'multiple-choice'
+            }
+          ]
+        },
+        {
+          title: 'Module 1 Certification Assessment',
+          type: 'certification',
+          questions: [
+            {
+              id: 'cert-1-1',
+              question: 'Which of the following BEST describes the difference between narrow AI and general AI?',
+              options: [
+                { label: 'A', text: 'Narrow AI is less intelligent, general AI is smarter' },
+                { label: 'B', text: 'Narrow AI is designed for one specific task; general AI could perform any intellectual task a human can' },
+                { label: 'C', text: 'Narrow AI uses Machine Learning; general AI uses hardcoded rules' },
+                { label: 'D', text: 'Narrow AI exists in software; general AI exists in robots' }
+              ],
+              answer: 'B',
+              type: 'multiple-choice'
+            },
+            {
+              id: 'cert-1-2',
+              question: 'A bank wants to automatically approve or deny loan applications. They have 500,000 past applications with labels "approved" or "denied." What type of ML would be most appropriate?',
+              options: [
+                { label: 'A', text: 'Unsupervised learning, because there is too much data' },
+                { label: 'B', text: 'Supervised learning, because they have labelled examples' },
+                { label: 'C', text: 'General AI, because the decision is complex' },
+                { label: 'D', text: 'Hardcoded rules, because finance requires precision' }
+              ],
+              answer: 'B',
+              type: 'multiple-choice'
+            },
+            {
+              id: 'cert-1-3',
+              question: 'In the Teachable Machine activity, what was the purpose of collecting many varied images (different angles, lighting, distance)?',
+              options: [
+                { label: 'A', text: 'To make the model file larger so it runs faster' },
+                { label: 'B', text: 'To confuse the algorithm deliberately' },
+                { label: 'C', text: 'To expose the model to a wider variety of examples, making it more robust' },
+                { label: 'D', text: 'Quantity of images doesn\'t matter — quality is all that counts' }
+              ],
+              answer: 'C',
+              type: 'multiple-choice'
+            },
+            {
+              id: 'cert-1-4',
+              question: 'Which of these is an example of UNSUPERVISED learning?',
+              options: [
+                { label: 'A', text: 'Training an email filter using emails labelled "spam" or "not spam"' },
+                { label: 'B', text: 'Training a model using house photos labelled "sold" or "not sold"' },
+                { label: 'C', text: 'A streaming service grouping listeners into music taste clusters with no predefined categories' },
+                { label: 'D', text: 'Teaching an AI to recognise stop signs from labelled road images' }
+              ],
+              answer: 'C',
+              type: 'multiple-choice'
+            },
+            {
+              id: 'cert-1-5',
+              question: 'Describe a Machine Learning application you use in your daily life. Name the application, explain what you think its inputs (features) are, and explain what prediction or output it produces.',
+              answer: '',
+              type: 'short-answer'
             }
           ]
         }
@@ -151,6 +316,108 @@ async function main() {
       });
 
       console.log(`    ✓ Created quiz: ${quiz.title}`);
+    }
+
+    // Seed hands-on activity for Module 1
+    if (moduleData.number === 1) {
+      const activity = await prisma.activity.create({
+        data: {
+          moduleId: module.id,
+          title: 'Train Your First AI in 15 Minutes',
+          description: 'You\'re going to train a real image-recognition AI model — no coding required — using Google\'s free Teachable Machine tool. Your AI will learn to distinguish between two things you choose.',
+          content: {
+            whatYouNeed: [
+              'A computer or laptop with a webcam',
+              'A modern web browser (Chrome recommended)',
+              'About 15 minutes'
+            ],
+            steps: [
+              'Go to https://teachablemachine.withgoogle.com and click the big green "Get Started" button.',
+              'Choose "Image Project", then "Standard image model". You\'ll see Class 1 and Class 2 sections.',
+              'Rename Class 1 and Class 2. Suggested pairs: Thumbs Up/Down, Glasses On/Off, Pen/No Pen, Smiling/Not Smiling.',
+              'For each class, click "Webcam", hold your gesture/object in front of the camera, press "Hold to Record" for 5–8 seconds. Aim for 50–80 images per class. Vary your position, angle, and lighting.',
+              'Click "Train Model". Wait 30–60 seconds.',
+              'In the Preview panel, show it Class 1 and Class 2 things — watch the confidence bars shift. Try edge cases.'
+            ],
+            reflections: [
+              'The AI only knows what you showed it. What would happen if someone else tried to use it?',
+              'If you only trained it with images of your right hand, will it work for left hands?',
+              'Could this system work poorly for certain groups of people? Why?'
+            ]
+          }
+        }
+      });
+
+      console.log(`    ✓ Created activity: ${activity.title}`);
+
+      const certification = await prisma.certification.create({
+        data: {
+          moduleId: module.id,
+          title: 'Module 1 Certification Assessment',
+          requiredScore: 80,
+          content: {
+            instructions: 'This certification assessment tests your understanding of AI and ML fundamentals. You need to score 80% or higher to earn your certificate.',
+            questions: [
+              {
+                id: 'cert-1-1',
+                question: 'Which of the following BEST describes the difference between narrow AI and general AI?',
+                options: [
+                  { label: 'A', text: 'Narrow AI is less intelligent, general AI is smarter' },
+                  { label: 'B', text: 'Narrow AI is designed for one specific task; general AI could perform any intellectual task a human can' },
+                  { label: 'C', text: 'Narrow AI uses Machine Learning; general AI uses hardcoded rules' },
+                  { label: 'D', text: 'Narrow AI exists in software; general AI exists in robots' }
+                ],
+                answer: 'B',
+                type: 'multiple-choice'
+              },
+              {
+                id: 'cert-1-2',
+                question: 'A bank wants to automatically approve or deny loan applications. They have 500,000 past applications with labels "approved" or "denied." What type of ML would be most appropriate?',
+                options: [
+                  { label: 'A', text: 'Unsupervised learning, because there is too much data' },
+                  { label: 'B', text: 'Supervised learning, because they have labelled examples' },
+                  { label: 'C', text: 'General AI, because the decision is complex' },
+                  { label: 'D', text: 'Hardcoded rules, because finance requires precision' }
+                ],
+                answer: 'B',
+                type: 'multiple-choice'
+              },
+              {
+                id: 'cert-1-3',
+                question: 'In the Teachable Machine activity, what was the purpose of collecting many varied images (different angles, lighting, distance)?',
+                options: [
+                  { label: 'A', text: 'To make the model file larger so it runs faster' },
+                  { label: 'B', text: 'To confuse the algorithm deliberately' },
+                  { label: 'C', text: 'To expose the model to a wider variety of examples, making it more robust' },
+                  { label: 'D', text: 'Quantity of images doesn\'t matter — quality is all that counts' }
+                ],
+                answer: 'C',
+                type: 'multiple-choice'
+              },
+              {
+                id: 'cert-1-4',
+                question: 'Which of these is an example of UNSUPERVISED learning?',
+                options: [
+                  { label: 'A', text: 'Training an email filter using emails labelled "spam" or "not spam"' },
+                  { label: 'B', text: 'Training a model using house photos labelled "sold" or "not sold"' },
+                  { label: 'C', text: 'A streaming service grouping listeners into music taste clusters with no predefined categories' },
+                  { label: 'D', text: 'Teaching an AI to recognise stop signs from labelled road images' }
+                ],
+                answer: 'C',
+                type: 'multiple-choice'
+              },
+              {
+                id: 'cert-1-5',
+                question: 'Describe a Machine Learning application you use in your daily life. Name the application, explain what you think its inputs (features) are, and explain what prediction or output it produces.',
+                answer: '',
+                type: 'short-answer'
+              }
+            ]
+          }
+        }
+      });
+
+      console.log(`    ✓ Created certification: ${certification.title}`);
     }
   }
 

@@ -35,6 +35,7 @@ router.get('/:moduleId', async (req, res) => {
         },
         quizzes: true,
         activities: true,
+        certifications: true,
       },
     });
 
@@ -42,9 +43,37 @@ router.get('/:moduleId', async (req, res) => {
       return res.status(404).json({ error: 'Module not found' });
     }
 
+    // Transform to match frontend expected format
+    const transformed = {
+      ...module,
+      selfCheckQuizzes: (module.quizzes || [])
+        .filter((q: any) => q.type === 'self-check')
+        .map((q: any) => ({
+          id: q.id,
+          title: q.title,
+          questions: q.questions,
+        })),
+      handsOnActivity: module.activities?.[0] ? {
+        id: module.activities[0].id,
+        title: module.activities[0].title,
+        description: module.activities[0].description,
+        ...module.activities[0].content,
+      } : undefined,
+      certificationAssessment: module.certifications?.[0] ? {
+        id: module.certifications[0].id,
+        questions: module.certifications[0].content.questions || [],
+      } : undefined,
+    };
+
+    // Remove the raw database fields
+    delete (transformed as any).quizzes;
+    delete (transformed as any).activities;
+    delete (transformed as any).certifications;
+
     res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
-    res.json(module);
+    res.json(transformed);
   } catch (error) {
+    console.error('Module fetch error:', error);
     res.status(500).json({ error: 'Failed to fetch module' });
   }
 });

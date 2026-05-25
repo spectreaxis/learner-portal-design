@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { LessonContent } from '@/components/lesson-content';
 import { LessonListItem } from '@/components/module-card';
 import { ProgressBar } from '@/components/progress';
@@ -15,10 +16,12 @@ import {
   BookOpen,
   HelpCircle,
   Wrench,
-  Award
+  Award,
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Module, Lesson } from '@/lib/types';
+import { useUpdateProgress, useCompleteActivity } from '@/lib/hooks/useLearner';
 
 // Code splitting: Lazy load QuizSection (heavy component with form logic)
 const QuizSection = dynamic(
@@ -58,8 +61,13 @@ export function LessonPageClient({
   lessonIndex,
   currentLessonIndex,
 }: LessonPageClientProps) {
+  const router = useRouter();
+  const updateProgressMutation = useUpdateProgress();
+  const completeActivityMutation = useCompleteActivity();
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<ContentTab>('lesson');
+  const [activityCompleted, setActivityCompleted] = useState(false);
 
   const prevLesson = lessonIndex > 0 ? module.lessons[lessonIndex - 1] : null;
   const nextLesson = lessonIndex < module.lessons.length - 1 ? module.lessons[lessonIndex + 1] : null;
@@ -190,6 +198,8 @@ export function LessonPageClient({
                   <QuizSection
                     title={relevantQuiz.title}
                     questions={relevantQuiz.questions}
+                    quizId={relevantQuiz.id}
+                    moduleId={moduleId}
                   />
                 </div>
               )}
@@ -251,6 +261,37 @@ export function LessonPageClient({
                       </ul>
                     </div>
                   )}
+
+                  {/* Activity Completion Checkbox */}
+                  <div className="p-5 rounded-2xl bg-card border-2 border-primary/20 shadow-sm">
+                    <label className="flex items-center gap-4 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={activityCompleted}
+                        onChange={async (e) => {
+                          const completed = e.target.checked;
+                          setActivityCompleted(completed);
+
+                          if (module.handsOnActivity?.id) {
+                            await completeActivityMutation.mutateAsync({
+                              activityId: module.handsOnActivity.id,
+                              completed
+                            });
+                          }
+                        }}
+                        disabled={completeActivityMutation.isPending}
+                        className="w-5 h-5 rounded border-2 border-primary text-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
+                      />
+                      <div className="flex-1">
+                        <p className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                          I have completed this hands-on activity
+                        </p>
+                        {completeActivityMutation.isPending && (
+                          <p className="text-xs text-muted-foreground mt-1">Saving...</p>
+                        )}
+                      </div>
+                    </label>
+                  </div>
                 </div>
               )}
 
@@ -265,13 +306,31 @@ export function LessonPageClient({
                     </p>
                   </div>
 
+                  {/* Readiness Check */}
+                  {currentLessonIndex < module.lessons.length && (
+                    <div className="p-5 rounded-2xl bg-warning/10 border border-warning/30 mb-6">
+                      <div className="flex items-start gap-3">
+                        <Award className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+                        <div>
+                          <h3 className="font-semibold text-foreground mb-1">Complete All Lessons First</h3>
+                          <p className="text-sm text-muted-foreground leading-relaxed">
+                            We recommend completing all {module.lessons.length} lessons before taking the certification assessment.
+                            You&apos;ve completed {currentLessonIndex} of {module.lessons.length} lessons so far.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <QuizSection
                     title="Certification Assessment"
                     questions={module.certificationAssessment.questions}
-                    onComplete={(score, maxScore) => {
+                    quizId={module.certificationAssessment.id}
+                    moduleId={moduleId}
+                    onComplete={(score, maxScore, certificate) => {
                       const percentage = Math.round((score / maxScore) * 100);
-                      if (percentage >= 80) {
-                        console.log('Certificate earned!');
+                      if (percentage >= 80 && certificate) {
+                        console.log('🎉 Certificate earned!', certificate);
                       }
                     }}
                   />
@@ -279,7 +338,7 @@ export function LessonPageClient({
                   <div className="p-5 rounded-2xl bg-gradient-to-br from-gold/5 via-gold/[0.02] to-transparent border border-gold/20">
                     <h3 className="font-semibold text-foreground mb-2">Certificate of Completion</h3>
                     <p className="text-sm text-muted-foreground">
-                      Upon passing the final quiz, you will receive an IIAIC-verified certificate recognised
+                      Upon passing this assessment with 80% or higher, you will receive an IIAIC-verified certificate recognised
                       globally under the IIAIC AI Competence Framework.
                     </p>
                   </div>
@@ -307,14 +366,34 @@ export function LessonPageClient({
                 </span>
 
                 {nextLesson ? (
-                  <Link
-                    href={`/learn/${moduleId}/${nextLesson.id}`}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-all shadow-sm"
+                  <button
+                    onClick={async () => {
+                      // Mark current lesson complete
+                      await updateProgressMutation.mutateAsync({
+                        lessonId: lesson.id,
+                        completed: true
+                      });
+
+                      // Navigate to next lesson
+                      router.push(`/learn/${moduleId}/${nextLesson.id}`);
+                    }}
+                    disabled={updateProgressMutation.isPending}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <span className="hidden sm:inline">Next Lesson</span>
-                    <span className="sm:hidden">Next</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </Link>
+                    {updateProgressMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span className="hidden sm:inline">Saving...</span>
+                        <span className="sm:hidden">...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="hidden sm:inline">Next Lesson</span>
+                        <span className="sm:hidden">Next</span>
+                        <ChevronRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
                 ) : (
                   <Link
                     href="/certificate"

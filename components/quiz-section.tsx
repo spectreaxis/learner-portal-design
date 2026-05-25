@@ -1,18 +1,24 @@
 'use client';
 
 import { useState, memo, useMemo, useEffect } from 'react';
-import { CheckCircle2, XCircle, ChevronRight, RotateCcw, Sparkles } from 'lucide-react';
+import { CheckCircle2, XCircle, ChevronRight, RotateCcw, Sparkles, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { QuizQuestion } from '@/lib/types';
 import { saveQuizProgress, getQuizProgress } from '@/lib/storage';
+import { useSubmitQuiz } from '@/lib/hooks/useLearner';
 
 interface QuizSectionProps {
   title: string;
   questions: QuizQuestion[];
-  onComplete?: (score: number, maxScore: number) => void;
+  quizId: string;
+  moduleId?: string;
+  onComplete?: (score: number, maxScore: number, certificate?: any) => void;
 }
 
-export const QuizSection = memo(function QuizSection({ title, questions, onComplete }: QuizSectionProps) {
+export const QuizSection = memo(function QuizSection({ title, questions, quizId, moduleId, onComplete }: QuizSectionProps) {
+  const router = useRouter();
+  const submitQuizMutation = useSubmitQuiz();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
   const [showResults, setShowResults] = useState(false);
@@ -54,12 +60,35 @@ export const QuizSection = memo(function QuizSection({ title, questions, onCompl
     setSubmitted(prev => ({ ...prev, [question.id]: true }));
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(prev => prev + 1);
     } else {
       setShowResults(true);
-      onComplete?.(score, questions.length);
+
+      // Submit to backend
+      try {
+        const result = await submitQuizMutation.mutateAsync({
+          quizId,
+          answers: selectedAnswers
+        });
+
+        // Check if certificate was earned
+        if (result.certificate) {
+          onComplete?.(score, questions.length, result.certificate);
+
+          // Redirect to certificate page after a brief celebration
+          setTimeout(() => {
+            router.push(`/certificate/${result.certificate.certificateId}`);
+          }, 2000);
+        } else {
+          onComplete?.(score, questions.length);
+        }
+      } catch (error) {
+        console.error('Failed to submit quiz:', error);
+        // Still show results locally even if backend fails
+        onComplete?.(score, questions.length);
+      }
     }
   };
 
@@ -77,40 +106,49 @@ export const QuizSection = memo(function QuizSection({ title, questions, onCompl
     return (
       <div className="p-6 rounded-2xl bg-card border border-border shadow-sm">
         <h3 className="text-lg font-semibold text-foreground mb-6">{title} — Results</h3>
-        
-        <div className="text-center py-8">
-          <div className={cn(
-            'w-20 h-20 rounded-2xl mx-auto mb-4 flex items-center justify-center',
-            passed ? 'bg-success/10' : 'bg-destructive/10'
-          )}>
-            {passed ? (
-              <CheckCircle2 className="w-10 h-10 text-success" />
-            ) : (
-              <XCircle className="w-10 h-10 text-destructive" />
-            )}
-          </div>
-          
-          <p className="text-4xl font-bold text-foreground mb-2">
-            {score} / {questions.length}
-          </p>
-          <p className={cn(
-            'text-sm font-medium',
-            passed ? 'text-success' : 'text-destructive'
-          )}>
-            {passed ? 'Great job!' : 'Keep practicing!'}
-          </p>
-          <p className="text-sm text-muted-foreground mt-1">
-            {percentage}% correct
-          </p>
-        </div>
 
-        <button
-          onClick={handleReset}
-          className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-muted text-foreground font-medium hover:bg-muted/80 transition-colors"
-        >
-          <RotateCcw className="w-4 h-4" />
-          Try Again
-        </button>
+        {submitQuizMutation.isPending ? (
+          <div className="text-center py-12">
+            <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-sm text-muted-foreground">Submitting your quiz...</p>
+          </div>
+        ) : (
+          <>
+            <div className="text-center py-8">
+              <div className={cn(
+                'w-20 h-20 rounded-2xl mx-auto mb-4 flex items-center justify-center',
+                passed ? 'bg-success/10' : 'bg-destructive/10'
+              )}>
+                {passed ? (
+                  <CheckCircle2 className="w-10 h-10 text-success" />
+                ) : (
+                  <XCircle className="w-10 h-10 text-destructive" />
+                )}
+              </div>
+
+              <p className="text-4xl font-bold text-foreground mb-2">
+                {score} / {questions.length}
+              </p>
+              <p className={cn(
+                'text-sm font-medium',
+                passed ? 'text-success' : 'text-destructive'
+              )}>
+                {passed ? 'Great job!' : 'Keep practicing!'}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {percentage}% correct
+              </p>
+            </div>
+
+            <button
+              onClick={handleReset}
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-muted text-foreground font-medium hover:bg-muted/80 transition-colors"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Try Again
+            </button>
+          </>
+        )}
       </div>
     );
   }
