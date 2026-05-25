@@ -56,7 +56,7 @@ export const LessonContent = memo(function LessonContent({ lesson, className }: 
 
       {/* Content */}
       <div className="space-y-4">
-        {(Array.isArray(lesson.content) ? lesson.content : lesson.content?.sections || []).map((paragraph, index) => {
+        {(Array.isArray(lesson.content) ? lesson.content : (lesson.content as any)?.sections || []).map((paragraph: any, index: number) => {
           // Check if it's a list item
           if (paragraph.startsWith('•') || paragraph.startsWith('-')) {
             return (
