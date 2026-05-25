@@ -57,11 +57,11 @@ router.get('/:moduleId', async (req, res) => {
         id: module.activities[0].id,
         title: module.activities[0].title,
         description: module.activities[0].description,
-        ...module.activities[0].content,
+        ...(module.activities[0].content as any),
       } : undefined,
       certificationAssessment: module.certifications?.[0] ? {
         id: module.certifications[0].id,
-        questions: module.certifications[0].content.questions || [],
+        questions: (module.certifications[0].content as any).questions || [],
       } : undefined,
     };
 
