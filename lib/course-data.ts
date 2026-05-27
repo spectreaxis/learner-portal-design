@@ -135,9 +135,13 @@ export const courseModules: Module[] = [
           {
             id: 'q1-2',
             question: 'In Machine Learning, a human programmer writes out all the rules the system uses to make decisions.',
-            answer: 'False',
+            options: [
+              { label: 'A', text: 'True' },
+              { label: 'B', text: 'False' }
+            ],
+            answer: 'B',
             explanation: 'The machine learns the rules from data; humans provide examples, not rules.',
-            type: 'true-false'
+            type: 'multiple-choice'
           },
           {
             id: 'q1-3',
@@ -270,9 +274,16 @@ export const courseModules: Module[] = [
         },
         {
           id: 'cert-1-5',
-          question: 'Describe a Machine Learning application you use in your daily life. Name the application, explain what you think its inputs (features) are, and explain what prediction or output it produces.',
-          answer: '',
-          type: 'short-answer'
+          question: 'Which of the following is the BEST example of a Machine Learning application in daily life?',
+          options: [
+            { label: 'A', text: 'A calculator performing arithmetic operations' },
+            { label: 'B', text: 'Netflix recommending shows based on your viewing history' },
+            { label: 'C', text: 'A thermostat turning on when temperature drops below a set point' },
+            { label: 'D', text: 'A digital clock displaying the current time' }
+          ],
+          answer: 'B',
+          explanation: 'Netflix uses ML to analyze patterns in your viewing behavior to make personalized recommendations.',
+          type: 'multiple-choice'
         }
       ]
     },
@@ -483,9 +494,13 @@ export const courseModules: Module[] = [
           {
             id: 'q2-2-2',
             question: 'For a model predicting whether a patient has a serious illness, recall is usually more important than precision.',
-            answer: 'True',
+            options: [
+              { label: 'A', text: 'True' },
+              { label: 'B', text: 'False' }
+            ],
+            answer: 'A',
             explanation: 'Missing a real illness (False Negative) is more dangerous than a false alarm.',
-            type: 'true-false'
+            type: 'multiple-choice'
           },
           {
             id: 'q2-2-3',
@@ -522,9 +537,13 @@ export const courseModules: Module[] = [
           {
             id: 'q2-3-2',
             question: 'A model can be biased even if the algorithm itself contains no intentional prejudice, simply because the training data reflects historical inequalities.',
-            answer: 'True',
+            options: [
+              { label: 'A', text: 'True' },
+              { label: 'B', text: 'False' }
+            ],
+            answer: 'A',
             explanation: 'Bias enters through data, not necessarily through code.',
-            type: 'true-false'
+            type: 'multiple-choice'
           }
         ]
       }
@@ -609,9 +628,16 @@ export const courseModules: Module[] = [
         },
         {
           id: 'cert-2-5',
-          question: 'Explain the difference between PRECISION and RECALL in your own words, and give a real-world example where maximising RECALL would be more important than maximising Precision.',
-          answer: '',
-          type: 'short-answer'
+          question: 'In which scenario would maximising RECALL be more important than Precision?',
+          options: [
+            { label: 'A', text: 'Spam email filter (we want to avoid false alarms)' },
+            { label: 'B', text: 'Disease screening test (we want to catch all potential cases)' },
+            { label: 'C', text: 'Restaurant recommendation system (we want highly relevant suggestions)' },
+            { label: 'D', text: 'Product search results (we want only exact matches)' }
+          ],
+          answer: 'B',
+          explanation: 'In medical screening, it is more important to catch all potential cases (high recall) even if it means some false positives, because missing a disease (false negative) could be life-threatening.',
+          type: 'multiple-choice'
         }
       ]
     },
