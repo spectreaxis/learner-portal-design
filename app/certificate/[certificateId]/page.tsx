@@ -1,22 +1,38 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useLearnerProgress } from '@/lib/hooks/useLearner';
 import { useModules } from '@/lib/hooks/useModules';
-import { Award, Download, Share2, GraduationCap, Shield, Loader2, ArrowLeft } from 'lucide-react';
+import { useCertificatePaymentStatus } from '@/lib/hooks/usePayment';
+import { Award, Download, Share2, GraduationCap, Shield, Loader2, ArrowLeft, Lock } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { CertificatePDF } from '@/components/CertificatePDF';
+import { PaymentModal } from '@/components/PaymentModal';
 
 export default function CertificateDetailPage({ params }: { params: Promise<{ certificateId: string }> }) {
   const { certificateId } = React.use(params);
   const { data: session } = useSession();
   const { data: modules = [], isLoading: modulesLoading } = useModules();
   const { data: learnerData, isLoading: learnerLoading } = useLearnerProgress();
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
-  const isLoading = modulesLoading || learnerLoading;
+  // Find the certificate early (before any conditional returns)
+  const certificate = learnerData?.certificates?.find(
+    (cert: any) => cert.certificateId === certificateId
+  );
+
+  // Find the module
+  const module = certificate ? modules.find((m) => m.id === certificate.moduleId) : null;
+
+  // Check payment status (ALL HOOKS must be called before any conditional returns)
+  const { data: paymentData, isLoading: paymentLoading, refetch: refetchPayment } = useCertificatePaymentStatus(certificate?.id || '');
+  const isPaid = paymentData?.isPaid || false;
+  const certificatePrice = 10; // KES (should match backend CERTIFICATE_PRICE)
+
+  const isLoading = modulesLoading || learnerLoading || paymentLoading;
 
   if (isLoading) {
     return (
@@ -29,17 +45,10 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
     );
   }
 
-  // Find the certificate
-  const certificate = learnerData?.certificates?.find(
-    (cert: any) => cert.certificateId === certificateId
-  );
-
+  // Now do conditional checks after all hooks
   if (!certificate) {
     notFound();
   }
-
-  // Find the module
-  const module = modules.find((m) => m.id === certificate.moduleId);
 
   if (!module) {
     notFound();
@@ -52,6 +61,10 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
   });
 
   const recipientName = session?.user?.name || learnerData?.name || 'Learner';
+
+  const handlePaymentSuccess = () => {
+    refetchPayment();
+  };
 
   return (
     <>
@@ -68,37 +81,57 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-foreground">Certificate Details</h1>
           <div className="flex gap-3">
-            <PDFDownloadLink
-              document={
-                <CertificatePDF
-                  recipientName={recipientName}
-                  moduleNumber={module.number}
-                  moduleTitle={module.title}
-                  certificateId={certificate.certificateId}
-                  issueDate={issueDate}
-                />
-              }
-              fileName={`IIAIC-Certificate-Module-${module.number}-${certificate.certificateId}.pdf`}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm"
-            >
-              {({ loading }) =>
-                loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Preparing...
-                  </>
-                ) : (
-                  <>
-                    <Download className="w-4 h-4" />
-                    Download PDF
-                  </>
-                )
-              }
-            </PDFDownloadLink>
-            <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-card border border-border text-foreground text-sm font-medium hover:bg-muted transition-colors shadow-sm">
-              <Share2 className="w-4 h-4" />
-              Share
-            </button>
+            {paymentLoading ? (
+              <button
+                disabled
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted text-muted-foreground text-sm font-medium cursor-not-allowed"
+              >
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Checking...
+              </button>
+            ) : isPaid ? (
+              <>
+                <PDFDownloadLink
+                  document={
+                    <CertificatePDF
+                      recipientName={recipientName}
+                      moduleNumber={module.number}
+                      moduleTitle={module.title}
+                      certificateId={certificate.certificateId}
+                      issueDate={issueDate}
+                    />
+                  }
+                  fileName={`IIAIC-Certificate-Module-${module.number}-${certificate.certificateId}.pdf`}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm"
+                >
+                  {({ loading }) =>
+                    loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Preparing...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4" />
+                        Download PDF
+                      </>
+                    )
+                  }
+                </PDFDownloadLink>
+                <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-card border border-border text-foreground text-sm font-medium hover:bg-muted transition-colors shadow-sm">
+                  <Share2 className="w-4 h-4" />
+                  Share
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setIsPaymentModalOpen(true)}
+                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shadow-lg"
+              >
+                <Lock className="w-4 h-4" />
+                Pay KES {certificatePrice.toFixed(2)} to Download
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -106,8 +139,27 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
       {/* Certificate Preview */}
       <div className="max-w-5xl mx-auto p-6">
         <div className="relative rounded-2xl overflow-hidden shadow-lg bg-white border-8 border-primary">
+          {/* Payment Required Overlay */}
+          {!isPaid && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md">
+              <div className="text-center p-8 bg-white/90 rounded-2xl shadow-2xl max-w-md mx-4">
+                <Lock className="w-16 h-16 text-primary mx-auto mb-4" />
+                <h3 className="text-2xl font-bold text-foreground mb-2">Certificate Locked</h3>
+                <p className="text-muted-foreground mb-6">
+                  Complete payment of <strong>KES {certificatePrice.toFixed(2)}</strong> to view and download your certificate
+                </p>
+                <button
+                  onClick={() => setIsPaymentModalOpen(true)}
+                  className="w-full bg-primary text-primary-foreground py-3 px-6 rounded-xl font-medium hover:bg-primary/90 transition-colors"
+                >
+                  Pay Now to Unlock
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Certificate Card */}
-          <div className="relative p-12 md:p-16 bg-white">
+          <div className={`relative p-12 md:p-16 bg-white ${!isPaid ? 'select-none pointer-events-none' : ''}`}>
             {/* Inner border */}
             <div className="border-2 border-primary/30 p-10 relative">
               {/* Seal */}
@@ -206,11 +258,39 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
           <p className="text-sm text-muted-foreground mb-4">
             This certificate verifies that the learner has successfully completed Module {module.number}: {module.title} with a passing score on the certification assessment.
           </p>
-          <p className="text-xs text-muted-foreground">
-            Click the "Download PDF" button above to download this certificate as a professional PDF file.
-          </p>
+          {!paymentLoading && !isPaid && (
+            <div className="mt-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
+              <div className="flex items-start gap-3">
+                <Lock className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-amber-900 dark:text-amber-100 mb-1">
+                    Payment Required
+                  </p>
+                  <p className="text-xs text-amber-800 dark:text-amber-200">
+                    To download this certificate as a PDF, please complete the payment of KES {certificatePrice.toFixed(2)} via M-Pesa.
+                    Your payment helps us maintain and improve the platform.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          {!paymentLoading && isPaid && (
+            <p className="text-xs text-muted-foreground">
+              Click the "Download PDF" button above to download this certificate as a professional PDF file.
+            </p>
+          )}
         </div>
       </div>
+
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        certificateId={certificate.id}
+        moduleName={module.title}
+        amount={certificatePrice}
+        onPaymentSuccess={handlePaymentSuccess}
+      />
     </>
   );
 }

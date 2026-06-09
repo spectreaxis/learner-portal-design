@@ -9,6 +9,7 @@ import { PrismaClient } from '@prisma/client';
 import authRoutes from './routes/auth.routes';
 import moduleRoutes from './routes/module.routes';
 import learnerRoutes, { certificateRouter } from './routes/learner.routes';
+import paymentRoutes from './routes/payment.routes';
 import { errorHandler } from './middleware/error.middleware';
 import { rateLimiter } from './middleware/rate-limit.middleware';
 
@@ -43,6 +44,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/modules', moduleRoutes);
 app.use('/api/learner', learnerRoutes);
 app.use('/api/learner', certificateRouter); // Public certificate verification
+app.use('/api/payment', paymentRoutes); // M-Pesa payment routes
 
 // Health check
 app.get('/health', (req, res) => {
