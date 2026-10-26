@@ -4,7 +4,6 @@ import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
 
 import authRoutes from './routes/auth.routes';
 import moduleRoutes from './routes/module.routes';
@@ -12,11 +11,12 @@ import learnerRoutes, { certificateRouter } from './routes/learner.routes';
 import paymentRoutes from './routes/payment.routes';
 import { errorHandler } from './middleware/error.middleware';
 import { rateLimiter } from './middleware/rate-limit.middleware';
+import { prismaClient, disconnectPrisma } from './infrastructure/prisma/client';
+import { ProviderFactory } from './config/providers.config';
 
 dotenv.config();
 
 const app = express();
-const prisma = new PrismaClient();
 const PORT = process.env.PORT || 4000;
 
 // Security middleware
@@ -48,7 +48,16 @@ app.use('/api/payment', paymentRoutes); // M-Pesa payment routes
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  const config = ProviderFactory.getConfig();
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    providers: {
+      auth: config.auth,
+      data: config.data,
+    },
+    environment: process.env.NODE_ENV || 'development',
+  });
 });
 
 // Error handling
@@ -63,6 +72,6 @@ app.listen(PORT, () => {
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down gracefully');
-  await prisma.$disconnect();
+  await disconnectPrisma();
   process.exit(0);
 });

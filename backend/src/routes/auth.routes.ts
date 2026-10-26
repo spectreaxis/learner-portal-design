@@ -1,54 +1,37 @@
 import express from 'express';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import { ProviderFactory } from '../config/providers.config';
+import { AuthService } from '../application/services/AuthService';
+import { AppError } from '../core/errors/AppError';
 
 const router = express.Router();
-const prisma = new PrismaClient();
+
+// Initialize AuthService with appropriate provider
+const authProvider = ProviderFactory.getAuthProvider();
+const authService = new AuthService(authProvider);
 
 // Register
 router.post('/register', async (req, res) => {
   try {
     const { email, password, name } = req.body;
 
-    // Check if user exists
-    const existing = await prisma.learner.findUnique({ where: { email } });
-    if (existing) {
-      return res.status(400).json({ error: 'Email already registered' });
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create user
-    const learner = await prisma.learner.create({
-      data: {
-        email,
-        password: hashedPassword,
-        name,
-      },
-    });
-
-    // Generate token
-    const token = jwt.sign(
-      { userId: learner.id },
-      process.env.JWT_SECRET!,
-      { expiresIn: '7d' }
-    );
+    const result = await authService.register(email, password, name);
 
     res.status(201).json({
-      token,
-      learner: {
-        id: learner.id,
-        email: learner.email,
-        name: learner.name,
-      },
+      token: result.token,
+      learner: result.user,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Registration error:', error);
+
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({
+        error: error.message,
+      });
+    }
+
     res.status(500).json({
       error: 'Registration failed',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 });
@@ -58,38 +41,24 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find user
-    const learner = await prisma.learner.findUnique({ where: { email } });
-    if (!learner) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-
-    // Verify password
-    const valid = await bcrypt.compare(password, learner.password);
-    if (!valid) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-
-    // Generate token
-    const token = jwt.sign(
-      { userId: learner.id },
-      process.env.JWT_SECRET!,
-      { expiresIn: '7d' }
-    );
+    const result = await authService.login(email, password);
 
     res.json({
-      token,
-      learner: {
-        id: learner.id,
-        email: learner.email,
-        name: learner.name,
-      },
+      token: result.token,
+      learner: result.user,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Login error:', error);
+
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({
+        error: error.message,
+      });
+    }
+
     res.status(500).json({
       error: 'Login failed',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 });

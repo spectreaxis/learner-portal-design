@@ -1,8 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { ProviderFactory } from '../config/providers.config';
+import { AppError } from '../core/errors/AppError';
 
 export interface AuthRequest extends Request {
   userId?: string;
@@ -16,21 +14,17 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
+    // Use auth provider to verify token
+    const authProvider = ProviderFactory.getAuthProvider();
+    const userId = await authProvider.verifyToken(token);
 
-    // Verify user exists in database to prevent foreign key errors with stale tokens
-    const user = await prisma.learner.findUnique({
-      where: { id: decoded.userId },
-      select: { id: true }
-    });
-
-    if (!user) {
-      return res.status(401).json({ error: 'User no longer exists. Please log in again.' });
+    req.userId = userId;
+    next();
+  } catch (error: any) {
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ error: error.message });
     }
 
-    req.userId = decoded.userId;
-    next();
-  } catch (error) {
     res.status(401).json({ error: 'Invalid or expired token' });
   }
 }

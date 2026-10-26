@@ -1,25 +1,34 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import { ProviderFactory } from '../config/providers.config';
+import { ModuleService } from '../application/services/ModuleService';
+import { ModuleRepository } from '../infrastructure/database/repositories/ModuleRepository';
+import { LessonRepository } from '../infrastructure/database/repositories/LessonRepository';
+import { AppError } from '../core/errors/AppError';
 
 const router = express.Router();
-const prisma = new PrismaClient();
+
+// Initialize data provider and repositories
+const dataProvider = ProviderFactory.getDataProvider();
+const moduleRepo = new ModuleRepository(dataProvider);
+const lessonRepo = new LessonRepository(dataProvider);
+
+// Initialize service
+const moduleService = new ModuleService(moduleRepo, lessonRepo);
 
 // Get all modules
 router.get('/', async (req, res) => {
   try {
-    const modules = await prisma.module.findMany({
-      include: {
-        lessons: {
-          select: { id: true, title: true, order: true },
-          orderBy: { order: 'asc' },
-        },
-      },
-      orderBy: { number: 'asc' },
-    });
+    const modules = await moduleService.getAllModules();
 
     res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
     res.json(modules);
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Modules fetch error:', error);
+
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+
     res.status(500).json({ error: 'Failed to fetch modules' });
   }
 });
@@ -27,24 +36,10 @@ router.get('/', async (req, res) => {
 // Get single module
 router.get('/:moduleId', async (req, res) => {
   try {
-    const module = await prisma.module.findUnique({
-      where: { id: req.params.moduleId },
-      include: {
-        lessons: {
-          orderBy: { order: 'asc' },
-        },
-        quizzes: true,
-        activities: true,
-        certifications: true,
-      },
-    });
-
-    if (!module) {
-      return res.status(404).json({ error: 'Module not found' });
-    }
+    const module = await moduleService.getModuleById(req.params.moduleId);
 
     // Transform to match frontend expected format
-    const transformed = {
+    const transformed: any = {
       ...module,
       selfCheckQuizzes: (module.quizzes || [])
         .filter((q: any) => q.type === 'self-check')
@@ -53,27 +48,36 @@ router.get('/:moduleId', async (req, res) => {
           title: q.title,
           questions: q.questions,
         })),
-      handsOnActivity: module.activities?.[0] ? {
-        id: module.activities[0].id,
-        title: module.activities[0].title,
-        description: module.activities[0].description,
-        ...(module.activities[0].content as any),
-      } : undefined,
-      certificationAssessment: module.certifications?.[0] ? {
-        id: module.certifications[0].id,
-        questions: (module.certifications[0].content as any).questions || [],
-      } : undefined,
+      handsOnActivity: module.activities?.[0]
+        ? {
+            id: module.activities[0].id,
+            title: module.activities[0].title,
+            description: module.activities[0].description,
+            ...(module.activities[0].content as any),
+          }
+        : undefined,
+      certificationAssessment: module.certifications?.[0]
+        ? {
+            id: module.certifications[0].id,
+            questions: (module.certifications[0].content as any).questions || [],
+          }
+        : undefined,
     };
 
     // Remove the raw database fields
-    delete (transformed as any).quizzes;
-    delete (transformed as any).activities;
-    delete (transformed as any).certifications;
+    delete transformed.quizzes;
+    delete transformed.activities;
+    delete transformed.certifications;
 
     res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
     res.json(transformed);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Module fetch error:', error);
+
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+
     res.status(500).json({ error: 'Failed to fetch module' });
   }
 });
@@ -81,18 +85,21 @@ router.get('/:moduleId', async (req, res) => {
 // Get lesson
 router.get('/:moduleId/lessons/:lessonId', async (req, res) => {
   try {
-    const lesson = await prisma.lesson.findUnique({
-      where: { id: req.params.lessonId },
-      include: { module: true },
-    });
+    const lesson = await moduleService.getLessonById(req.params.lessonId);
 
-    if (!lesson || lesson.moduleId !== req.params.moduleId) {
+    if ((lesson as any).moduleId !== req.params.moduleId) {
       return res.status(404).json({ error: 'Lesson not found' });
     }
 
     res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
     res.json(lesson);
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Lesson fetch error:', error);
+
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+
     res.status(500).json({ error: 'Failed to fetch lesson' });
   }
 });

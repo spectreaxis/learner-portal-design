@@ -1,10 +1,17 @@
 import express, { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import mpesaService from '../services/mpesa.service';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
+import { ProviderFactory } from '../config/providers.config';
+import { PaymentRepository } from '../infrastructure/database/repositories/PaymentRepository';
+import { CertificateRepository } from '../infrastructure/database/repositories/CertificateRepository';
+import { AppError, NotFoundError, ForbiddenError } from '../core/errors/AppError';
 
 const router = express.Router();
-const prisma = new PrismaClient();
+
+// Initialize data provider and repositories
+const dataProvider = ProviderFactory.getDataProvider();
+const paymentRepo = new PaymentRepository(dataProvider);
+const certificateRepo = new CertificateRepository(dataProvider);
 
 const CERTIFICATE_PRICE = parseFloat(process.env.CERTIFICATE_PRICE || '646.80');
 
@@ -15,7 +22,7 @@ const CERTIFICATE_PRICE = parseFloat(process.env.CERTIFICATE_PRICE || '646.80');
 router.post('/initiate', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const { certificateId, phoneNumber } = req.body;
-    const learnerId = req.userId;
+    const learnerId = req.userId!;
 
     // Validation
     if (!certificateId || !phoneNumber) {
@@ -26,8 +33,7 @@ router.post('/initiate', authenticate, async (req: AuthRequest, res: Response) =
     }
 
     // Check if certificate exists
-    const certificate = await prisma.certificate.findUnique({
-      where: { id: certificateId },
+    const certificate: any = await dataProvider.findById('certificate', certificateId, {
       include: { learner: true, module: true },
     });
 
@@ -47,9 +53,7 @@ router.post('/initiate', authenticate, async (req: AuthRequest, res: Response) =
     }
 
     // Check if payment already exists
-    const existingPayment = await prisma.payment.findUnique({
-      where: { certificateId },
-    });
+    const existingPayment = await paymentRepo.findByCertificateId(certificateId);
 
     if (existingPayment && existingPayment.status === 'COMPLETED') {
       return res.status(400).json({
@@ -67,27 +71,16 @@ router.post('/initiate', authenticate, async (req: AuthRequest, res: Response) =
     });
 
     // Create or update payment record
-    const payment = await prisma.payment.upsert({
-      where: { certificateId },
-      create: {
-        learnerId,
-        certificateId,
-        amount: CERTIFICATE_PRICE,
-        phoneNumber,
-        merchantRequestId: stkResponse.MerchantRequestID,
-        checkoutRequestId: stkResponse.CheckoutRequestID,
-        status: 'PENDING',
-        metadata: {
-          moduleName: certificate.module.title,
-          initiatedAt: new Date().toISOString(),
-        },
-      },
-      update: {
-        phoneNumber,
-        merchantRequestId: stkResponse.MerchantRequestID,
-        checkoutRequestId: stkResponse.CheckoutRequestID,
-        status: 'PENDING',
-        updatedAt: new Date(),
+    const payment = await paymentRepo.upsertPayment(certificateId, {
+      learnerId,
+      amount: CERTIFICATE_PRICE,
+      phoneNumber,
+      merchantRequestId: stkResponse.MerchantRequestID,
+      checkoutRequestId: stkResponse.CheckoutRequestID,
+      status: 'PENDING',
+      metadata: {
+        moduleName: certificate.module.title,
+        initiatedAt: new Date().toISOString(),
       },
     });
 
@@ -103,6 +96,14 @@ router.post('/initiate', authenticate, async (req: AuthRequest, res: Response) =
     });
   } catch (error: any) {
     console.error('❌ Payment initiation error:', error);
+
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
     return res.status(500).json({
       success: false,
       message: error.message || 'Failed to initiate payment',
@@ -144,12 +145,11 @@ router.post('/callback', async (req: Request, res: Response) => {
       return res.status(200).json({ ResultCode: 0, ResultDesc: 'Success' });
     }
 
-    const { MerchantRequestID, CheckoutRequestID, ResultCode, ResultDesc, CallbackMetadata } = Body.stkCallback;
+    const { MerchantRequestID, CheckoutRequestID, ResultCode, ResultDesc, CallbackMetadata } =
+      Body.stkCallback;
 
     // Find payment record
-    const payment = await prisma.payment.findUnique({
-      where: { checkoutRequestId: CheckoutRequestID },
-    });
+    const payment = await paymentRepo.findByCheckoutRequestId(CheckoutRequestID);
 
     if (!payment) {
       console.log('⚠️ Payment not found for CheckoutRequestID:', CheckoutRequestID);
@@ -160,43 +160,41 @@ router.post('/callback', async (req: Request, res: Response) => {
     if (ResultCode === 0) {
       // Extract payment details from callback metadata
       const metadata = CallbackMetadata?.Item || [];
-      const mpesaReceipt = metadata.find((item: any) => item.Name === 'MpesaReceiptNumber')?.Value;
-      const transactionDate = metadata.find((item: any) => item.Name === 'TransactionDate')?.Value;
+      const mpesaReceipt = metadata.find(
+        (item: any) => item.Name === 'MpesaReceiptNumber'
+      )?.Value;
+      const transactionDate = metadata.find(
+        (item: any) => item.Name === 'TransactionDate'
+      )?.Value;
       const phoneNumber = metadata.find((item: any) => item.Name === 'PhoneNumber')?.Value;
       const amount = metadata.find((item: any) => item.Name === 'Amount')?.Value;
 
       // Update payment as COMPLETED
-      await prisma.payment.update({
-        where: { id: payment.id },
-        data: {
-          status: 'COMPLETED',
-          mpesaReceiptNumber: mpesaReceipt,
-          transactionDate: parseMpesaDate(transactionDate),
-          resultCode: String(ResultCode),
-          resultDesc: ResultDesc,
-          metadata: {
-            ...(payment.metadata as any),
-            callbackReceivedAt: new Date().toISOString(),
-            mpesaReceipt,
-            phoneNumber,
-            amount,
-          },
+      await paymentRepo.updatePaymentStatus(payment.id, {
+        status: 'COMPLETED',
+        mpesaReceiptNumber: mpesaReceipt,
+        transactionDate: parseMpesaDate(transactionDate),
+        resultCode: String(ResultCode),
+        resultDesc: ResultDesc,
+        metadata: {
+          ...(payment.metadata as any),
+          callbackReceivedAt: new Date().toISOString(),
+          mpesaReceipt,
+          phoneNumber,
+          amount,
         },
       });
 
       console.log('✅ Payment completed successfully:', mpesaReceipt);
     } else {
       // Payment failed or cancelled
-      await prisma.payment.update({
-        where: { id: payment.id },
-        data: {
-          status: ResultCode === 1032 ? 'CANCELLED' : 'FAILED',
-          resultCode: String(ResultCode),
-          resultDesc: ResultDesc,
-          metadata: {
-            ...(payment.metadata as any),
-            callbackReceivedAt: new Date().toISOString(),
-          },
+      await paymentRepo.updatePaymentStatus(payment.id, {
+        status: ResultCode === 1032 ? 'CANCELLED' : 'FAILED',
+        resultCode: String(ResultCode),
+        resultDesc: ResultDesc,
+        metadata: {
+          ...(payment.metadata as any),
+          callbackReceivedAt: new Date().toISOString(),
         },
       });
 
@@ -215,124 +213,146 @@ router.post('/callback', async (req: Request, res: Response) => {
  * GET /api/payment/status/:checkoutRequestId
  * Check payment status
  */
-router.get('/status/:checkoutRequestId', authenticate, async (req: AuthRequest, res: Response) => {
-  try {
-    const { checkoutRequestId } = req.params;
-    const learnerId = req.userId;
+router.get(
+  '/status/:checkoutRequestId',
+  authenticate,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const checkoutRequestId = req.params.checkoutRequestId as string;
+      const learnerId = req.userId!;
 
-    const payment = await prisma.payment.findUnique({
-      where: { checkoutRequestId },
-      include: {
-        certificate: {
-          include: {
-            module: true,
+      const payment: any = await dataProvider.findUnique('payment', { checkoutRequestId }, {
+        include: {
+          certificate: {
+            include: {
+              module: true,
+            },
           },
         },
-      },
-    });
-
-    if (!payment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Payment not found',
       });
-    }
 
-    // Verify payment belongs to the requesting learner
-    if (payment.learnerId !== learnerId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Unauthorized',
-      });
-    }
-
-    // If still pending after 60 seconds, query M-Pesa API for status
-    const ageInSeconds = (Date.now() - payment.createdAt.getTime()) / 1000;
-    if (payment.status === 'PENDING' && ageInSeconds > 60) {
-      try {
-        const stkStatus = await mpesaService.querySTKPushStatus(checkoutRequestId);
-
-        if (stkStatus.ResultCode === '0') {
-          // Payment was successful but callback might have failed
-          await prisma.payment.update({
-            where: { id: payment.id },
-            data: { status: 'COMPLETED', resultCode: '0', resultDesc: 'Success' },
-          });
-          payment.status = 'COMPLETED';
-        }
-      } catch (error) {
-        console.error('Error querying STK status:', error);
+      if (!payment) {
+        return res.status(404).json({
+          success: false,
+          message: 'Payment not found',
+        });
       }
-    }
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        paymentId: payment.id,
-        status: payment.status,
-        amount: payment.amount,
-        mpesaReceipt: payment.mpesaReceiptNumber,
-        transactionDate: payment.transactionDate,
-        certificate: {
-          id: payment.certificate.id,
-          certificateId: payment.certificate.certificateId,
-          moduleName: payment.certificate.module.title,
+      // Verify payment belongs to the requesting learner
+      if (payment.learnerId !== learnerId) {
+        return res.status(403).json({
+          success: false,
+          message: 'Unauthorized',
+        });
+      }
+
+      // If still pending after 60 seconds, query M-Pesa API for status
+      const ageInSeconds = (Date.now() - payment.createdAt.getTime()) / 1000;
+      if (payment.status === 'PENDING' && ageInSeconds > 60) {
+        try {
+          const stkStatus = await mpesaService.querySTKPushStatus(checkoutRequestId);
+
+          if (stkStatus.ResultCode === '0') {
+            // Payment was successful but callback might have failed
+            await paymentRepo.updatePaymentStatus(payment.id, {
+              status: 'COMPLETED',
+              resultCode: '0',
+              resultDesc: 'Success',
+            });
+            payment.status = 'COMPLETED';
+          }
+        } catch (error) {
+          console.error('Error querying STK status:', error);
+        }
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          paymentId: payment.id,
+          status: payment.status,
+          amount: payment.amount,
+          mpesaReceipt: payment.mpesaReceiptNumber,
+          transactionDate: payment.transactionDate,
+          certificate: {
+            id: payment.certificate.id,
+            certificateId: payment.certificate.certificateId,
+            moduleName: payment.certificate.module.title,
+          },
         },
-      },
-    });
-  } catch (error: any) {
-    console.error('❌ Status check error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to check payment status',
-    });
+      });
+    } catch (error: any) {
+      console.error('❌ Status check error:', error);
+
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to check payment status',
+      });
+    }
   }
-});
+);
 
 /**
  * GET /api/payment/certificate/:certificateId
  * Check if certificate is paid for
  */
-router.get('/certificate/:certificateId', authenticate, async (req: AuthRequest, res: Response) => {
-  try {
-    const { certificateId } = req.params;
-    const learnerId = req.userId;
+router.get(
+  '/certificate/:certificateId',
+  authenticate,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const certificateId = req.params.certificateId as string;
+      const learnerId = req.userId!;
 
-    const payment = await prisma.payment.findUnique({
-      where: { certificateId },
-    });
+      const payment = await paymentRepo.findByCertificateId(certificateId);
 
-    if (!payment) {
+      if (!payment) {
+        return res.status(200).json({
+          success: true,
+          data: { isPaid: false },
+        });
+      }
+
+      // Verify payment belongs to the requesting learner
+      if (payment.learnerId !== learnerId) {
+        return res.status(403).json({
+          success: false,
+          message: 'Unauthorized',
+        });
+      }
+
       return res.status(200).json({
         success: true,
-        data: { isPaid: false },
+        data: {
+          isPaid: payment.status === 'COMPLETED',
+          status: payment.status,
+          amount: payment.amount,
+          mpesaReceipt: payment.mpesaReceiptNumber,
+        },
       });
-    }
+    } catch (error: any) {
+      console.error('❌ Certificate payment check error:', error);
 
-    // Verify payment belongs to the requesting learner
-    if (payment.learnerId !== learnerId) {
-      return res.status(403).json({
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      return res.status(500).json({
         success: false,
-        message: 'Unauthorized',
+        message: 'Failed to check payment status',
       });
     }
-
-    return res.status(200).json({
-      success: true,
-      data: {
-        isPaid: payment.status === 'COMPLETED',
-        status: payment.status,
-        amount: payment.amount,
-        mpesaReceipt: payment.mpesaReceiptNumber,
-      },
-    });
-  } catch (error: any) {
-    console.error('❌ Certificate payment check error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to check payment status',
-    });
   }
-});
+);
 
 export default router;

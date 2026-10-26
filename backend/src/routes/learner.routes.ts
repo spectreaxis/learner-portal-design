@@ -1,10 +1,38 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
-import bcrypt from 'bcryptjs';
+import { ProviderFactory } from '../config/providers.config';
+import { LearnerService } from '../application/services/LearnerService';
+import { ProgressService } from '../application/services/ProgressService';
+import { QuizService } from '../application/services/QuizService';
+import { CertificateService } from '../application/services/CertificateService';
+import { AuthService } from '../application/services/AuthService';
+import { LearnerRepository } from '../infrastructure/database/repositories/LearnerRepository';
+import { ProgressRepository } from '../infrastructure/database/repositories/ProgressRepository';
+import { QuizRepository } from '../infrastructure/database/repositories/QuizRepository';
+import { CertificateRepository } from '../infrastructure/database/repositories/CertificateRepository';
+import { LessonRepository } from '../infrastructure/database/repositories/LessonRepository';
+import { PaymentRepository } from '../infrastructure/database/repositories/PaymentRepository';
+import { AppError } from '../core/errors/AppError';
 
 const router = express.Router();
-const prisma = new PrismaClient();
+
+// Initialize data provider and repositories
+const dataProvider = ProviderFactory.getDataProvider();
+const authProvider = ProviderFactory.getAuthProvider();
+
+const learnerRepo = new LearnerRepository(dataProvider);
+const progressRepo = new ProgressRepository(dataProvider);
+const lessonRepo = new LessonRepository(dataProvider);
+const quizRepo = new QuizRepository(dataProvider);
+const certificateRepo = new CertificateRepository(dataProvider);
+const paymentRepo = new PaymentRepository(dataProvider);
+
+// Initialize services
+const learnerService = new LearnerService(learnerRepo, progressRepo);
+const progressService = new ProgressService(progressRepo, learnerRepo, lessonRepo);
+const quizService = new QuizService(quizRepo, certificateRepo, learnerRepo);
+const certificateService = new CertificateService(certificateRepo, paymentRepo);
+const authService = new AuthService(authProvider);
 
 // All routes require authentication
 router.use(authenticate);
@@ -12,28 +40,17 @@ router.use(authenticate);
 // Get learner progress
 router.get('/progress', async (req: AuthRequest, res) => {
   try {
-    const learner = await prisma.learner.findUnique({
-      where: { id: req.userId },
-      include: {
-        progress: {
-          include: { lesson: true },
-          orderBy: { completedAt: 'desc' },
-        },
-        quizSubmissions: {
-          orderBy: { submittedAt: 'desc' },
-          take: 10,
-        },
-        certificates: {
-          include: {
-            module: true, // Include module data for locking logic
-          },
-        },
-      },
-    });
+    const learner = await learnerService.getProgress(req.userId!);
 
     res.setHeader('Cache-Control', 'private, max-age=60');
     res.json(learner);
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Progress fetch error:', error);
+
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+
     res.status(500).json({ error: 'Failed to fetch progress' });
   }
 });
@@ -43,34 +60,20 @@ router.post('/progress', async (req: AuthRequest, res) => {
   try {
     const { lessonId, completed } = req.body;
 
-    const progress = await prisma.lessonProgress.upsert({
-      where: {
-        learnerId_lessonId: {
-          learnerId: req.userId!,
-          lessonId,
-        },
-      },
-      update: {
-        completed,
-        completedAt: completed ? new Date() : null,
-      },
-      create: {
-        learnerId: req.userId!,
-        lessonId,
-        completed,
-        completedAt: completed ? new Date() : null,
-      },
-    });
-
-    // Update last activity
-    await prisma.learner.update({
-      where: { id: req.userId },
-      data: { lastActivityAt: new Date() },
-    });
+    const progress = await learnerService.updateLessonProgress(
+      req.userId!,
+      lessonId,
+      completed
+    );
 
     res.json(progress);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Progress update error:', error);
+
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+
     res.status(500).json({ error: 'Failed to update progress' });
   }
 });
@@ -80,101 +83,30 @@ router.post('/quizzes', async (req: AuthRequest, res) => {
   try {
     const { quizId, answers } = req.body;
 
-    // Try Quiz table first
-    let quiz = await prisma.quiz.findUnique({
-      where: { id: quizId },
-      include: { module: true }
-    });
+    // Try to find as quiz first
+    const quiz = await quizRepo.findById(quizId);
 
-    // If not found, try Certification table
-    let certification = null;
-    let isCertification = false;
-    if (!quiz) {
-      certification = await prisma.certification.findUnique({
-        where: { id: quizId },
-        include: { module: true }
-      });
-
+    let result;
+    if (quiz) {
+      // It's a quiz
+      result = await quizService.submitQuiz(req.userId!, quizId, answers);
+    } else {
+      // Try as certification
+      const certification = await certificateRepo.findCertificationById(quizId);
       if (!certification) {
         return res.status(404).json({ error: 'Quiz or certification not found' });
       }
-      isCertification = true;
+      result = await quizService.submitCertification(req.userId!, quizId, answers);
     }
 
-    // Get questions and module info
-    const questions = isCertification
-      ? (certification!.content as any).questions
-      : (quiz!.questions as any[]);
-    const moduleId = isCertification ? certification!.moduleId : quiz!.moduleId;
-    const module = isCertification ? certification!.module : quiz!.module;
-
-    // Calculate score
-    let score = 0;
-    questions.forEach((q: any) => {
-      if (answers[q.id]?.toLowerCase() === q.answer.toLowerCase()) {
-        score++;
-      }
-    });
-
-    const percentage = Math.round((score / questions.length) * 100);
-    const requiredScore = isCertification ? certification!.requiredScore : 70;
-    const passed = percentage >= requiredScore;
-
-    const submissionData: any = {
-      learner: {
-        connect: { id: req.userId! }
-      },
-      answers,
-      score,
-      maxScore: questions.length,
-      passed,
-    };
-
-    if (isCertification) {
-      submissionData.certification = { connect: { id: quizId } };
-    } else {
-      submissionData.quiz = { connect: { id: quizId } };
-    }
-
-    const submission = await prisma.quizSubmission.create({
-      data: submissionData,
-    });
-
-    // Certificate generation for passing certification assessments
-    let certificateRecord = null;
-    if (isCertification && passed) {
-      // Check if certificate already exists
-      const existingCert = await prisma.certificate.findUnique({
-        where: {
-          learnerId_moduleId: {
-            learnerId: req.userId!,
-            moduleId: moduleId
-          }
-        }
-      });
-
-      if (!existingCert) {
-        // Generate unique certificate ID
-        const moduleNumber = module.number;
-        const timestamp = Date.now().toString(36).toUpperCase();
-        const certificateId = `IIAIC-M${moduleNumber}-${timestamp}`;
-
-        certificateRecord = await prisma.certificate.create({
-          data: {
-            learnerId: req.userId!,
-            moduleId: moduleId,
-            certificateId,
-            verificationUrl: `${process.env.APP_URL || 'http://localhost:3000'}/certificate/${certificateId}`
-          }
-        });
-      } else {
-        certificateRecord = existingCert;
-      }
-    }
-
-    res.json({ submission, certificate: certificateRecord });
-  } catch (error) {
+    res.json(result);
+  } catch (error: any) {
     console.error('Quiz submission error:', error);
+
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+
     res.status(500).json({ error: 'Failed to submit quiz' });
   }
 });
@@ -184,36 +116,19 @@ router.put('/profile', async (req: AuthRequest, res) => {
   try {
     const { name, email } = req.body;
 
-    // Validation
-    if (!name || !email) {
-      return res.status(400).json({ error: 'Name and email are required' });
-    }
-
-    // Check if email is already taken by another user
-    const existingUser = await prisma.learner.findUnique({
-      where: { email },
-    });
-
-    if (existingUser && existingUser.id !== req.userId) {
-      return res.status(400).json({ error: 'Email already in use' });
-    }
-
-    // Update profile
-    const updatedLearner = await prisma.learner.update({
-      where: { id: req.userId },
-      data: { name, email },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        enrolledAt: true,
-        currentStreak: true,
-      },
+    const updatedLearner = await learnerService.updateProfile(req.userId!, {
+      name,
+      email,
     });
 
     res.json(updatedLearner);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Profile update error:', error);
+
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+
     res.status(500).json({ error: 'Failed to update profile' });
   }
 });
@@ -223,42 +138,16 @@ router.put('/password', async (req: AuthRequest, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
-    // Validation
-    if (!currentPassword || !newPassword) {
-      return res.status(400).json({ error: 'Current and new password are required' });
-    }
-
-    if (newPassword.length < 6) {
-      return res.status(400).json({ error: 'New password must be at least 6 characters' });
-    }
-
-    // Get current user
-    const learner = await prisma.learner.findUnique({
-      where: { id: req.userId },
-    });
-
-    if (!learner) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    // Verify current password
-    const isValidPassword = await bcrypt.compare(currentPassword, learner.password);
-    if (!isValidPassword) {
-      return res.status(401).json({ error: 'Current password is incorrect' });
-    }
-
-    // Hash new password
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    // Update password
-    await prisma.learner.update({
-      where: { id: req.userId },
-      data: { password: hashedPassword },
-    });
+    await authService.changePassword(req.userId!, currentPassword, newPassword);
 
     res.json({ message: 'Password updated successfully' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Password change error:', error);
+
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+
     res.status(500).json({ error: 'Failed to change password' });
   }
 });
@@ -268,18 +157,16 @@ router.post('/activities', async (req: AuthRequest, res) => {
   try {
     const { activityId, completed } = req.body;
 
-    // Update last activity timestamp
-    await prisma.learner.update({
-      where: { id: req.userId },
-      data: { lastActivityAt: new Date() }
-    });
-
-    // For now, we just track activity views
-    // Could add ActivityCompletion table later if needed
+    await learnerService.trackActivity(req.userId!);
 
     res.json({ success: true, activityId, completed });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Activity tracking error:', error);
+
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+
     res.status(500).json({ error: 'Failed to track activity' });
   }
 });
@@ -289,21 +176,18 @@ const certificateRouter = express.Router();
 
 certificateRouter.get('/certificates/:certificateId', async (req, res) => {
   try {
-    const certificate = await prisma.certificate.findUnique({
-      where: { certificateId: req.params.certificateId },
-      include: {
-        learner: { select: { name: true, email: true } },
-        module: { select: { number: true, title: true } }
-      }
-    });
-
-    if (!certificate) {
-      return res.status(404).json({ error: 'Certificate not found' });
-    }
+    const certificate = await certificateService.verifyCertificate(
+      req.params.certificateId
+    );
 
     res.json(certificate);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Certificate verification error:', error);
+
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+
     res.status(500).json({ error: 'Failed to verify certificate' });
   }
 });
