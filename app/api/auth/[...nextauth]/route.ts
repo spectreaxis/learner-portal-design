@@ -17,7 +17,8 @@ export const authOptions: NextAuthOptions = {
 
         try {
           // Call your backend API for authentication
-          const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+          // Use server-side API_URL (internal Docker network) or fallback to NEXT_PUBLIC for local dev
+          const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
           const res = await fetch(`${API_URL}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
