@@ -17,8 +17,9 @@ export const authOptions: NextAuthOptions = {
 
         try {
           // Call your backend API for authentication
-          // Use server-side API_URL (internal Docker network) or fallback to NEXT_PUBLIC for local dev
-          const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+          // Server-side: use HTTP (not HTTPS) to backend domain since SSL terminates at Coolify proxy
+          // Client-side: uses NEXT_PUBLIC_API_URL with HTTPS
+          const API_URL = process.env.API_URL || 'http://api.cogniwiseai.com/api';
           const res = await fetch(`${API_URL}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
