@@ -56,6 +56,7 @@ export class QuizService {
       quizId,
       answers,
       score: correctAnswers,
+      maxScore: questions.length,
       passed,
     });
 
@@ -106,6 +107,7 @@ export class QuizService {
       certificationId,
       answers,
       score: correctAnswers,
+      maxScore: questions.length,
       passed,
     });
 

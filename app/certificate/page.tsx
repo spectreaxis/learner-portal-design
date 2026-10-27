@@ -103,7 +103,7 @@ export default function CertificatePage() {
                     </div>
                     {isReadyForAssessment && lastLesson && (
                       <Link
-                        href={`/learn/${module.id}/${lastLesson.id}`}
+                        href={`/learn/${module.id}/${lastLesson.id}?tab=certification`}
                         className="flex items-center justify-center gap-2 w-full px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
                       >
                         <Award className="w-4 h-4" />

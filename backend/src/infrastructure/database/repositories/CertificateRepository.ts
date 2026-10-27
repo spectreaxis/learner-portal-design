@@ -7,7 +7,7 @@ export interface Certificate {
   moduleId: string;
   certificateId: string;
   verificationUrl: string;
-  issuedAt: Date;
+  earnedAt: Date;
 }
 
 export interface Certification {
@@ -66,7 +66,7 @@ export class CertificateRepository extends BaseRepository<Certificate> {
   }): Promise<Certificate> {
     return this.dataProvider.create<Certificate>(this.model, {
       ...data,
-      issuedAt: new Date(),
+      earnedAt: new Date(),
     });
   }
 

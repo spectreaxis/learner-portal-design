@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { LessonContent } from '@/components/lesson-content';
 import { LessonListItem } from '@/components/module-card';
 import { ProgressBar } from '@/components/progress';
@@ -62,12 +62,21 @@ export function LessonPageClient({
   currentLessonIndex,
 }: LessonPageClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const updateProgressMutation = useUpdateProgress();
   const completeActivityMutation = useCompleteActivity();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<ContentTab>('lesson');
   const [activityCompleted, setActivityCompleted] = useState(false);
+
+  // Check if tab parameter is in URL and set active tab accordingly
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && (tabParam === 'lesson' || tabParam === 'quiz' || tabParam === 'activity' || tabParam === 'certification')) {
+      setActiveTab(tabParam as ContentTab);
+    }
+  }, [searchParams]);
 
   const prevLesson = lessonIndex > 0 ? module.lessons[lessonIndex - 1] : null;
   const nextLesson = lessonIndex < module.lessons.length - 1 ? module.lessons[lessonIndex + 1] : null;
@@ -403,11 +412,11 @@ export function LessonPageClient({
                         completed: true
                       });
 
-                      // Navigate to certificate page
-                      router.push('/certificate');
+                      // Switch to certification tab to take assessment
+                      setActiveTab('certification');
                     }}
                     disabled={updateProgressMutation.isPending}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gold text-gold-foreground text-sm font-medium hover:bg-gold/90 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {updateProgressMutation.isPending ? (
                       <>
@@ -417,7 +426,7 @@ export function LessonPageClient({
                     ) : (
                       <>
                         <Award className="w-4 h-4" />
-                        <span>Complete & Get Certificate</span>
+                        <span>Complete & Take Assessment</span>
                       </>
                     )}
                   </button>

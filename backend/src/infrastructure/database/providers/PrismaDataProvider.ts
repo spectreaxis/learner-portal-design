@@ -110,16 +110,15 @@ export class PrismaDataProvider implements IDataProvider {
 
   /**
    * Get Prisma model from model name
-   * @param model - Model name (e.g., 'learner', 'module')
+   * @param model - Model name in camelCase (e.g., 'learner', 'module', 'lessonProgress')
    * @returns Prisma model delegate
    */
   private getPrismaModel(model: string): any {
-    const modelKey = model.toLowerCase();
     // @ts-ignore - Prisma models are dynamically accessed
-    if (!this.prisma[modelKey]) {
+    if (!this.prisma[model]) {
       throw new Error(`Model "${model}" not found in Prisma Client`);
     }
     // @ts-ignore
-    return this.prisma[modelKey];
+    return this.prisma[model];
   }
 }

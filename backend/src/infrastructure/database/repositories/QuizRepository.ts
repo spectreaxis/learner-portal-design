@@ -18,6 +18,7 @@ export interface QuizSubmission {
   certificationId: string | null;
   answers: any; // JSON
   score: number;
+  maxScore: number;
   passed: boolean;
   submittedAt: Date;
 }
@@ -46,6 +47,7 @@ export class QuizRepository extends BaseRepository<Quiz> {
     certificationId?: string;
     answers: any;
     score: number;
+    maxScore: number;
     passed: boolean;
   }): Promise<QuizSubmission> {
     return this.dataProvider.create<QuizSubmission>('quizSubmission', {

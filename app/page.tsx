@@ -36,6 +36,9 @@ export default function Dashboard() {
   const currentModuleProgress = learnerData?.progress?.find((p: any) => !p.completed);
   const currentModule = modules.find(m => m.id === currentModuleProgress?.moduleId) || modules[0];
 
+  // Determine if user has started learning (has any completed lessons or in-progress)
+  const hasStarted = completedLessons > 0 || (learnerData?.progress && learnerData.progress.length > 0);
+
   const firstName = session?.user?.name?.split(' ')[0] || 'there';
   const totalCertificates = learnerData?.certificates?.length || 0;
   const currentStreak = learnerData?.currentStreak || 0;
@@ -43,8 +46,8 @@ export default function Dashboard() {
   return (
     <>
       <Header
-        title={`Welcome back, ${firstName}`}
-        subtitle="Continue your AI/ML learning journey"
+        title={hasStarted ? `Welcome back, ${firstName}` : `Welcome, ${firstName}`}
+        subtitle={hasStarted ? "Continue your AI/ML learning journey" : "Start your AI/ML learning journey"}
       />
 
         <div className="p-6 lg:p-8 max-w-7xl mx-auto">
@@ -101,12 +104,12 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Continue Learning Card */}
+          {/* Continue/Start Learning Card */}
           {currentModule && (
             <div className="mb-8">
               <h2 className="text-base font-semibold text-foreground mb-4 flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-primary" />
-                Continue Learning
+                {hasStarted ? 'Continue Learning' : 'Start Learning'}
               </h2>
               <div className="p-6 rounded-2xl bg-gradient-to-br from-primary/5 via-primary/[0.02] to-transparent border border-primary/10 shadow-sm">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
@@ -137,7 +140,7 @@ export default function Dashboard() {
                     href={`/learn/${currentModule.id}`}
                     className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors shadow-sm"
                   >
-                    Continue
+                    {hasStarted ? 'Continue' : 'Get Started'}
                     <ChevronRight className="w-4 h-4" />
                   </Link>
                 </div>
