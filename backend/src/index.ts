@@ -20,7 +20,8 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 // Trust proxy (required when behind reverse proxy like Traefik/Nginx)
-app.set('trust proxy', true);
+// Set to 1 to trust only the first proxy (Traefik in Coolify)
+app.set('trust proxy', 1);
 
 // Security middleware
 app.use(helmet());
