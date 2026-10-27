@@ -40,15 +40,9 @@ export class ModuleRepository extends BaseRepository<Module> {
         lessons: {
           orderBy: { order: 'asc' },
         },
-        quizzes: {
-          orderBy: { order: 'asc' },
-        },
-        activities: {
-          orderBy: { order: 'asc' },
-        },
-        certifications: {
-          orderBy: { order: 'asc' },
-        },
+        quizzes: true,
+        activities: true,
+        certifications: true,
       },
     });
   }
