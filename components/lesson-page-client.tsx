@@ -46,6 +46,9 @@ const QuizSection = dynamic(
   }
 );
 
+// One centred column shared by the header, tabs, content and footer so they line up
+const CONTENT_COLUMN = 'mx-auto w-full max-w-4xl';
+
 type ContentTab = 'lesson' | 'quiz' | 'activity' | 'certification';
 
 interface LessonPageClientProps {
@@ -206,7 +209,8 @@ export function LessonPageClient({
           <div className="flex-1 min-w-0 flex flex-col pt-14 md:pt-0">
             {/* Top Progress Bar */}
             <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border">
-              <div className="px-6 py-4">
+              <div className="px-6 lg:px-8 py-4">
+                <div className={CONTENT_COLUMN}>
                 <div className="flex items-center justify-between mb-2">
                   <Link
                     href={`/learn/${moduleId}`}
@@ -220,10 +224,13 @@ export function LessonPageClient({
                   </span>
                 </div>
                 <ProgressBar progress={moduleProgress} size="sm" />
+                </div>
               </div>
 
               {/* Content Tabs */}
-              <div className="px-6 flex gap-1 border-t border-border pt-3 pb-3 overflow-x-auto">
+              {tabs.length > 0 && (
+              <div className="px-6 lg:px-8 border-t border-border pt-3 pb-3">
+                <div className={cn(CONTENT_COLUMN, 'flex gap-1 overflow-x-auto')}>
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
@@ -239,11 +246,14 @@ export function LessonPageClient({
                     {tab.label}
                   </button>
                 ))}
+                </div>
               </div>
+              )}
             </div>
 
             {/* Content */}
-            <div className="flex-1 p-6 lg:p-8 max-w-4xl">
+            <div className="flex-1 px-6 py-6 lg:px-8 lg:py-8">
+              <div className={CONTENT_COLUMN}>
               {/* Wait for saved progress so finished quizzes open on their results */}
               {gate.isLoading ? (
                 <div className="flex items-center justify-center py-24">
@@ -523,14 +533,15 @@ export function LessonPageClient({
               )}
               </>
               )}
+              </div>
             </div>
 
             {/* Navigation Footer */}
-            <div className="sticky bottom-0 bg-background/95 backdrop-blur-md border-t border-border px-6 py-4">
+            <div className="sticky bottom-0 bg-background/95 backdrop-blur-md border-t border-border px-6 lg:px-8 py-4">
               {navError && (
-                <p className="max-w-4xl mb-3 text-sm text-destructive" role="alert">{navError}</p>
+                <p className={cn(CONTENT_COLUMN, 'mb-3 text-sm text-destructive')} role="alert">{navError}</p>
               )}
-              <div className="flex items-center justify-between gap-3 max-w-4xl">
+              <div className={cn(CONTENT_COLUMN, 'flex items-center justify-between gap-3')}>
                 {prevLesson ? (
                   <Link
                     href={`/learn/${moduleId}/${prevLesson.id}`}
@@ -628,7 +639,7 @@ export function LessonPageClient({
           </div>
 
           {/* Desktop Lesson Sidebar */}
-          <aside className="hidden lg:block w-80 border-l border-border bg-card/30 overflow-y-auto">
+          <aside className="hidden lg:block w-80 flex-shrink-0 border-l border-border bg-card/30 overflow-y-auto">
             <div className="sticky top-0 p-5 border-b border-border bg-card/50 backdrop-blur-sm">
               <h3 className="font-semibold text-foreground mb-1">Module {module.number}</h3>
               <p className="text-sm text-muted-foreground line-clamp-2">{module.title}</p>
