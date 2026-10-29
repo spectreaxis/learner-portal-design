@@ -4,7 +4,7 @@ export const courseModules: Module[] = [
   {
     id: 'module-1',
     number: 1,
-    title: 'AI Is Already in Your Life — Let\'s Understand It',
+    title: 'AI Is Already in Your Life: Let\'s Understand It',
     subtitle: 'Cogniwise Artificial Intelligence Literacy Basic AI/ML Course',
     level: 'Absolute Beginner',
     estimatedTime: '45–55 minutes',
@@ -23,14 +23,14 @@ export const courseModules: Module[] = [
         title: 'What Actually Is AI?',
         content: [
           'You\'ve probably heard the term "Artificial Intelligence" in movies, news headlines, and product ads. But what does it actually mean?',
-          'AI is software that can perform tasks that normally require human intelligence — things like recognising a face in a photo, understanding what you said to a voice assistant, or recommending a song you might enjoy. That\'s it. No robots taking over the world. Just software that\'s pretty good at specific cognitive tasks.',
+          'AI is software that can perform tasks that normally require human intelligence, things like recognising a face in a photo, understanding what you said to a voice assistant, or recommending a song you might enjoy. That\'s it. No robots taking over the world. Just software that\'s pretty good at specific cognitive tasks.',
           'There are two ideas people often mean when they say "AI":',
           '**Narrow AI (what actually exists today)**: This is AI designed to do one specific type of task really well. Examples include spam filters, face-unlock systems, Netflix recommendations, and Google Translate.',
-          'Narrow AI is excellent at its one job — but completely useless outside it. The AI that beats the world chess champion cannot drive a car, diagnose a medical condition, or recognise your dog.',
+          'Narrow AI is excellent at its one job, but completely useless outside it. The AI that beats the world chess champion cannot drive a car, diagnose a medical condition, or recognise your dog.',
           '**General AI (not here yet)**: This would be an AI that can genuinely learn and do anything a human can do, adapting to entirely new situations the way we do. True general AI does not exist yet.',
-          'Recent large language models can do many different things — write, reason, translate, summarise, code, and more. But they still have significant limits: they can\'t learn from a new experience the way a human does, they don\'t truly "understand," and they remain highly dependent on the data they were trained on. Think of them as very broad narrow AI.'
+          'Recent large language models can do many different things: write, reason, translate, summarise, code, and more. But they still have significant limits: they can\'t learn from a new experience the way a human does, they don\'t truly "understand," and they remain highly dependent on the data they were trained on. Think of them as very broad narrow AI.'
         ],
-        keyInsight: 'When a news headline says "AI can now do X," they almost always mean a system trained specifically for X — or a large model prompted to do X. It\'s impressive — but it doesn\'t "think" the way you do.',
+        keyInsight: 'When a news headline says "AI can now do X," they almost always mean a system trained specifically for X, or a large model prompted to do X. It\'s impressive, but it doesn\'t "think" the way you do.',
         video: {
           title: 'What is Artificial Intelligence?',
           source: 'IBM Technology',
@@ -48,9 +48,9 @@ export const courseModules: Module[] = [
           'This works for obvious spam. But spammers quickly learned to work around these rules. You\'d need thousands of rules, and you\'d still miss new tricks.',
           '**The Machine Learning Way: Learning from Examples**',
           'Machine Learning (ML) takes a completely different approach. Instead of writing rules, you show the computer thousands of examples and let it figure out the patterns itself.',
-          'With spam detection using ML: 1) You gather 10,000 emails labelled "spam" or "not spam". 2) You feed them into an ML algorithm. 3) The algorithm finds patterns (combinations of words, sender behaviours, timing, etc.). 4) It builds a model — essentially a set of rules it discovered on its own. 5) Now it can classify new emails it has never seen before.',
-          'The key difference: a human didn\'t program the rules — the machine learned them from data.',
-          '**The Simple Analogy**: Think about how a child learns to recognise a cat. You don\'t hand them a rulebook saying "furry + four legs + pointy ears = cat." You just show them cats. Many, many cats. Eventually they can recognise a cat they\'ve never seen before. Machine Learning works the same way — through examples, not instructions.'
+          'With spam detection using ML: 1) You gather 10,000 emails labelled "spam" or "not spam". 2) You feed them into an ML algorithm. 3) The algorithm finds patterns (combinations of words, sender behaviours, timing, etc.). 4) It builds a model, essentially a set of rules it discovered on its own. 5) Now it can classify new emails it has never seen before.',
+          'The key difference: a human didn\'t program the rules. The machine learned them from data.',
+          '**The Simple Analogy**: Think about how a child learns to recognise a cat. You don\'t hand them a rulebook saying "furry + four legs + pointy ears = cat." You just show them cats. Many, many cats. Eventually they can recognise a cat they\'ve never seen before. Machine Learning works the same way: through examples, not instructions.'
         ],
         video: {
           title: 'Machine Learning Explained',
@@ -69,7 +69,7 @@ export const courseModules: Module[] = [
           '**Feature**: A measurable property of each example. Example: The number of exclamation marks in an email.',
           '**Label**: The answer you want the model to predict. Example: "Spam" or "not spam".',
           '**Training**: The process of the machine learning from the dataset. Example: Feeding the 10,000 emails to the algorithm.',
-          '**Model**: The output of training — the learned patterns. Example: The finished spam detector.',
+          '**Model**: The output of training: the learned patterns. Example: The finished spam detector.',
           '**Prediction**: What the model outputs for a new, unseen example. Example: "This new email is probably spam".'
         ],
         keyInsight: 'Think of it this way: Training is studying. The model is your brain after studying. A prediction is answering a question on an exam you\'ve never seen before.'
@@ -78,10 +78,10 @@ export const courseModules: Module[] = [
         id: 'lesson-1-4',
         title: 'Two Main Flavours of Machine Learning',
         content: [
-          '**Supervised Learning — "Learning with an Answer Key"**',
+          '**Supervised Learning: "Learning with an Answer Key"**',
           'The most common type. The training data has both examples and correct answers (labels). The machine learns to map examples to answers.',
           'Examples: Spam filtering (Emails + spam/not-spam labels), Image recognition (Photos + labels like "cat," "dog," "car"), House price prediction (House features + actual prices).',
-          '**Unsupervised Learning — "Finding Patterns Without an Answer Key"**',
+          '**Unsupervised Learning: "Finding Patterns Without an Answer Key"**',
           'Here, the data has no labels. The machine looks for natural groupings or patterns on its own.',
           'Examples: Customer segmentation (finding natural clusters like "bargain hunters," "brand loyalists"), Anomaly detection (finding unusual activity in bank transactions).'
         ],
@@ -98,18 +98,18 @@ export const courseModules: Module[] = [
           '**Shopping**: Amazon\'s "Customers also bought..." (recommendation), Dynamic pricing (demand predictions).',
           '**Healthcare**: Detecting tumours in X-rays and scans (image recognition), Predicting patient deterioration (risk scoring).',
           '**Navigation**: Google Maps ETA (regression/prediction), Traffic prediction (pattern recognition over time).',
-          'All of these are examples of narrow AI — each one does its specific job extremely well, but that\'s all it does.'
+          'All of these are examples of narrow AI. Each one does its specific job extremely well, but that\'s all it does.'
         ]
       },
       {
         id: 'lesson-1-6',
-        title: 'Ethics Spotlight — A Brief but Important Note',
+        title: 'Ethics Spotlight: A Brief but Important Note',
         content: [
-          'You\'ve just learned how AI systems work. Before we wrap up, there\'s one thing every AI user should understand: AI is only as good — and as fair — as the data it was trained on.',
+          'You\'ve just learned how AI systems work. Before we wrap up, there\'s one thing every AI user should understand: AI is only as good (and as fair) as the data it was trained on.',
           'A spam filter trained mostly on English-language emails may perform poorly on emails in other languages.',
           'A face-recognition system trained primarily on photos of light-skinned faces may struggle with darker skin tones.',
           'An autocomplete tool trained on text from one culture may suggest things that feel odd or inappropriate in another.',
-          'These aren\'t just technical problems — they can affect real people in real ways. Being aware of this is the first step to being a thoughtful user of AI.',
+          'These aren\'t just technical problems. They can affect real people in real ways. Being aware of this is the first step to being a thoughtful user of AI.',
           'When you encounter an AI system making odd or unfair-seeming decisions, the question to ask is: "What was this trained on, and whose experiences were included?"'
         ]
       }
@@ -201,7 +201,7 @@ export const courseModules: Module[] = [
     handsOnActivity: {
       id: 'activity-m1-teachable',
       title: 'Train Your First AI in 15 Minutes',
-      description: 'You\'re going to train a real image-recognition AI model — no coding required — using Google\'s free Teachable Machine tool. Your AI will learn to distinguish between two things you choose.',
+      description: 'You\'re going to train a real image-recognition AI model, with no coding required, using Google\'s free Teachable Machine tool. Your AI will learn to distinguish between two things you choose.',
       whatYouNeed: [
         'A computer or laptop with a webcam',
         'A modern web browser (Chrome recommended)',
@@ -213,7 +213,7 @@ export const courseModules: Module[] = [
         'Rename Class 1 and Class 2. Suggested pairs: Thumbs Up/Down, Glasses On/Off, Pen/No Pen, Smiling/Not Smiling.',
         'For each class, click "Webcam", hold your gesture/object in front of the camera, press "Hold to Record" for 5–8 seconds. Aim for 50–80 images per class. Vary your position, angle, and lighting.',
         'Click "Train Model". Wait 30–60 seconds.',
-        'In the Preview panel, show it Class 1 and Class 2 things — watch the confidence bars shift. Try edge cases.'
+        'In the Preview panel, show it Class 1 and Class 2 things and watch the confidence bars shift. Try edge cases.'
       ],
       reflections: [
         'The AI only knows what you showed it. What would happen if someone else tried to use it?',
@@ -255,7 +255,7 @@ export const courseModules: Module[] = [
             { label: 'A', text: 'To make the model file larger so it runs faster' },
             { label: 'B', text: 'To confuse the algorithm deliberately' },
             { label: 'C', text: 'To expose the model to a wider variety of examples, making it more robust' },
-            { label: 'D', text: 'Quantity of images doesn\'t matter — quality is all that counts' }
+            { label: 'D', text: 'Quantity of images doesn\'t matter; quality is all that counts' }
           ],
           answer: 'C',
           type: 'multiple-choice'
@@ -288,22 +288,22 @@ export const courseModules: Module[] = [
       ]
     },
     keyTakeaways: [
-      'AI is software that performs tasks requiring human-like intelligence. Most AI in widespread use today is narrow — designed for one specific task.',
+      'AI is software that performs tasks requiring human-like intelligence. Most AI in widespread use today is narrow, designed for one specific task.',
       'Machine Learning is the most common way to build AI. Instead of writing rules, you feed the system labelled examples and it learns patterns from them.',
       'The six vocabulary words that unlock most ML conversations: dataset, feature, label, training, model, prediction',
       'Supervised learning uses labelled examples (right answers included). Unsupervised learning finds patterns without labels.',
-      'You use AI/ML every day — in your email, music, maps, shopping, and camera apps.',
-      'ML systems are only as good as the data they\'re trained on — and that data can carry biases and blind spots with real consequences.'
+      'You use AI/ML every day: in your email, music, maps, shopping, and camera apps.',
+      'ML systems are only as good as the data they\'re trained on, and that data can carry biases and blind spots with real consequences.'
     ]
   },
   {
     id: 'module-2',
     number: 2,
-    title: 'How Machines Actually Learn — Under the Hood',
+    title: 'How Machines Actually Learn: Under the Hood',
     subtitle: 'Cogniwise Artificial Intelligence Literacy Basic AI/ML Course',
     level: 'Intermediate Beginner',
     estimatedTime: '90–120 minutes',
-    description: 'In this module, you\'ll look under the hood. How does a machine actually "learn"? How do we know if it\'s learned well — or if it\'s quietly failing? And what happens when ML systems go wrong?',
+    description: 'In this module, you\'ll look under the hood. How does a machine actually "learn"? How do we know if it\'s learned well, or if it\'s quietly failing? And what happens when ML systems go wrong?',
     learningObjectives: [
       'Explain what a dataset is, including the difference between training data and test data, and why the split matters',
       'Describe what overfitting is and why it\'s a problem',
@@ -319,7 +319,7 @@ export const courseModules: Module[] = [
           'A dataset is a structured collection of examples. Think of it like a spreadsheet where:',
           '• Each row is one example (one record, one observation)',
           '• Each column is one feature (one measurable property)',
-          '• One special column is the label — the correct answer you want to predict',
+          '• One special column is the label: the correct answer you want to predict',
           'Real-world datasets have thousands, millions, or even billions of rows.',
           '**Data Quality Matters Enormously**',
           'A model is only as good as the data it learned from. Garbage in, garbage out. Common data quality problems:',
@@ -328,38 +328,38 @@ export const courseModules: Module[] = [
           '• Outliers: A house listed at $50 million in a neighbourhood of $300,000 homes',
           '• Imbalanced classes: If your spam dataset has 95% "not spam" and 5% "spam," a model that just always says "not spam" will be 95% accurate but completely useless'
         ],
-        keyInsight: 'Data scientists often report that 60–80% of their actual work time is spent on data cleaning and preparation — not on building models.'
+        keyInsight: 'Data scientists often report that 60–80% of their actual work time is spent on data cleaning and preparation, not on building models.'
       },
       {
         id: 'lesson-2-2',
         title: 'Training Data vs. Test Data',
         content: [
           '**The Problem with Testing on What You Trained With**',
-          'Imagine a student who memorises every question and answer from last year\'s exam exactly. On that exact exam, they\'d get 100%. But put a new question in front of them — they\'d struggle, because they memorised, not understood. ML models can do the same thing.',
+          'Imagine a student who memorises every question and answer from last year\'s exam exactly. On that exact exam, they\'d get 100%. But put a new question in front of them and they\'d struggle, because they memorised, not understood. ML models can do the same thing.',
           '**The Solution: The Train/Test Split**',
           'Before training, you randomly split your dataset into two parts:',
-          '• Training Set (~80%) — Used to train the model',
-          '• Test Set (~20%) — Locked away, used ONLY to evaluate',
+          '• Training Set (~80%): Used to train the model',
+          '• Test Set (~20%): Locked away, used ONLY to evaluate',
           'The test set is like the final exam the student has never seen. It gives you an honest measure of how well the model will perform on new, real-world data.'
         ],
-        keyInsight: 'Think of the test set as a sealed envelope. You set it aside on day one, train your model using only the training data, and only open the envelope at the very end. If you peek at the test data during training — even accidentally — your results can\'t be trusted.'
+        keyInsight: 'Think of the test set as a sealed envelope. You set it aside on day one, train your model using only the training data, and only open the envelope at the very end. If you peek at the test data during training, even accidentally, your results can\'t be trusted.'
       },
       {
         id: 'lesson-2-3',
         title: 'Overfitting: When a Model Is TOO Good at Studying',
         content: [
-          'Overfitting happens when a model learns the training data too well — including its noise and quirks — and fails to generalise to new data.',
-          '**Underfitting (too simple)**: The model hasn\'t learned enough — like drawing a straight line through data that clearly curves.',
+          'Overfitting happens when a model learns the training data too well (including its noise and quirks) and fails to generalise to new data.',
+          '**Underfitting (too simple)**: The model hasn\'t learned enough, like drawing a straight line through data that clearly curves.',
           '**Good fit**: The model captures the real pattern without chasing every noise point. Generalises well to new data.',
           '**Overfitting (too complex)**: The model has traced every single data point perfectly, including noise and outliers. Looks amazing on training data, fails on test data.',
           '**Spotting Overfitting**: The warning sign is a large gap between training performance and test performance.',
-          '| Underfitting | 60% training, 58% test | Both low — model too simple',
-          '| Good fit | 92% training, 89% test | Close together — healthy',
-          '| Overfitting | 99% training, 71% test | Big gap — memorised, didn\'t learn',
+          '| Underfitting | 60% training, 58% test | Both low, model too simple',
+          '| Good fit | 92% training, 89% test | Close together, healthy',
+          '| Overfitting | 99% training, 71% test | Big gap: memorised, didn\'t learn',
           '**How to Fight Overfitting**:',
-          '• Use more training data — harder to memorise a million examples than a hundred',
-          '• Simplify the model — fewer parameters, less room to memorise',
-          '• Data augmentation — artificially create more training examples'
+          '• Use more training data: it\'s harder to memorise a million examples than a hundred',
+          '• Simplify the model: fewer parameters, less room to memorise',
+          '• Data augmentation: artificially create more training examples'
         ],
         video: {
           title: 'Overfitting and Underfitting in Machine Learning',
@@ -374,7 +374,7 @@ export const courseModules: Module[] = [
         title: 'Evaluating a Model: The Confusion Matrix',
         content: [
           '**More Than Just "Accuracy"**',
-          'Accuracy sounds like all you need. But it can be deeply misleading. Scenario: You\'re building a model to detect a rare disease that affects 1% of people tested. A model that just says "no disease" for everyone would be 99% accurate — and completely useless.',
+          'Accuracy sounds like all you need. But it can be deeply misleading. Scenario: You\'re building a model to detect a rare disease that affects 1% of people tested. A model that just says "no disease" for everyone would be 99% accurate, and completely useless.',
           '**What Is a Confusion Matrix?**',
           'For a yes/no prediction, you have four possible outcomes:',
           '• True Positive (TP): Model correctly identifies a sick person.',
@@ -385,7 +385,7 @@ export const courseModules: Module[] = [
           '• Precision = Of everyone the model flagged as positive, how many actually were? TP / (TP + FP)',
           '• Recall (Sensitivity) = Of all actual positives, how many did the model catch? TP / (TP + FN)'
         ],
-        keyInsight: 'For medical diagnosis, high Recall is usually more important than high Precision — it\'s worse to miss a real case than to have some false alarms. For spam filtering, you might prioritise Precision — accidentally marking a real email as spam is annoying.',
+        keyInsight: 'For medical diagnosis, high Recall is usually more important than high Precision, because it\'s worse to miss a real case than to have some false alarms. For spam filtering, you might prioritise Precision, since accidentally marking a real email as spam is annoying.',
         video: {
           title: 'Confusion Matrix Explained',
           source: 'Simplilearn',
@@ -399,7 +399,7 @@ export const courseModules: Module[] = [
         title: 'Linear Regression: Predicting Numbers, Not Categories',
         content: [
           '**When the Answer Is a Number**',
-          'Sometimes we want to predict a number — a price, a temperature, a travel time. Regression is the family of ML techniques that do this.',
+          'Sometimes we want to predict a number: a price, a temperature, a travel time. Regression is the family of ML techniques that do this.',
           '**The Concept**',
           'Imagine you have data on house sizes (square footage) and their sale prices. If you plot them on a graph, you\'d probably see a cloud of dots that trends upward: bigger house → higher price.',
           'Linear regression draws the best-fit straight line through that cloud of dots. Once you have that line, you can predict the price of any house by plugging in its size.',
@@ -410,7 +410,7 @@ export const courseModules: Module[] = [
           '**What "Learning" Means in Regression**',
           'The model "learns" by adjusting the slope and starting value until the predicted prices are as close as possible to the actual prices. The gap between prediction and actual is called the error (or loss).'
         ],
-        keyInsight: 'This is the same "trend line" or "line of best fit" you may have seen in a high school science class — just applied to predictions.'
+        keyInsight: 'This is the same "trend line" or "line of best fit" you may have seen in a high school science class, just applied to predictions.'
       },
       {
         id: 'lesson-2-6',
@@ -422,7 +422,7 @@ export const courseModules: Module[] = [
           '**3. Measurement Bias**: The way data was collected introduces distortions. Example: Using "arrest rate" as a proxy for "crime rate" introduces bias from historical over-policing.',
           '**4. Feedback Loops**: The model\'s predictions influence future data, reinforcing biases. Example: A recommendation algorithm learns that outrage content keeps people watching → recommends more → gets positive feedback → recommends even more.',
           '**Why This Matters**: ML systems now influence who gets a job interview, who gets approved for a loan, who gets shown a university ad, who gets flagged by law enforcement.',
-          '**Transparency and Explainability**: Many powerful ML models are "black boxes." The question to always ask: If this system makes a decision that harms someone, can they understand why — and challenge it?'
+          '**Transparency and Explainability**: Many powerful ML models are "black boxes." The question to always ask: If this system makes a decision that harms someone, can they understand why and challenge it?'
         ],
         keyInsight: 'AI is a powerful tool, but it is not neutral. Every AI system encodes assumptions made by its designers, the data it was trained on, and the goals it was optimised for.',
         video: {
@@ -444,7 +444,7 @@ export const courseModules: Module[] = [
             question: 'A model scores 97% accuracy on the training set but only 63% on the test set. This is most likely:',
             options: [
               { label: 'A', text: 'Underfitting' },
-              { label: 'B', text: 'A perfect result — 97% is great' },
+              { label: 'B', text: 'A perfect result: 97% is great' },
               { label: 'C', text: 'Overfitting' },
               { label: 'D', text: 'A data quality issue' }
             ],
@@ -527,7 +527,7 @@ export const courseModules: Module[] = [
             options: [
               { label: 'A', text: 'Overfitting' },
               { label: 'B', text: 'Historical or representation bias inherited from past lending practices' },
-              { label: 'C', text: 'Underfitting — the model didn\'t learn enough' },
+              { label: 'C', text: 'Underfitting: the model didn\'t learn enough' },
               { label: 'D', text: 'A bug in the algorithm code' }
             ],
             answer: 'B',
@@ -551,7 +551,7 @@ export const courseModules: Module[] = [
     handsOnActivity: {
       id: 'activity-m2-regression',
       title: 'Build a Regression Model in Google Sheets',
-      description: 'You\'re going to build a simple linear regression model using a real dataset directly in Google Sheets — visualise it, make predictions with it, and explore what happens when you add more data.',
+      description: 'You\'re going to build a simple linear regression model using a real dataset directly in Google Sheets, then visualise it, make predictions with it, and explore what happens when you add more data.',
       whatYouNeed: [
         'A free Google account',
         'Google Sheets (free, browser-based)',
@@ -583,8 +583,8 @@ export const courseModules: Module[] = [
           question: 'You train a model to classify customer reviews as positive or negative. Training accuracy is 94% but test accuracy is 68%. What is the most likely problem?',
           options: [
             { label: 'A', text: 'The training set was too large' },
-            { label: 'B', text: 'The model is underfitting — it needs to be more complex' },
-            { label: 'C', text: 'The model is overfitting — it memorised the training data' },
+            { label: 'B', text: 'The model is underfitting: it needs to be more complex' },
+            { label: 'C', text: 'The model is overfitting: it memorised the training data' },
             { label: 'D', text: 'The test set should have been larger than the training set' }
           ],
           answer: 'C',
@@ -620,7 +620,7 @@ export const courseModules: Module[] = [
           options: [
             { label: 'A', text: 'The algorithm contains intentionally sexist code' },
             { label: 'B', text: 'The test set was contaminated by training data' },
-            { label: 'C', text: 'Historical bias — past hiring data reflected gender imbalances which the model learned to replicate' },
+            { label: 'C', text: 'Historical bias: past hiring data reflected gender imbalances which the model learned to replicate' },
             { label: 'D', text: 'Overfitting to recent applicant data' }
           ],
           answer: 'C',
@@ -644,7 +644,7 @@ export const courseModules: Module[] = [
     keyTakeaways: [
       'A dataset is a table of examples: rows are examples, columns are features, one column is the label',
       'Always split your data into a training set and a test set. Never evaluate a model on data it trained on',
-      'Overfitting is when a model performs great on training data but poorly on new data — it memorised instead of generalising',
+      'Overfitting is when a model performs great on training data but poorly on new data because it memorised instead of generalising',
       'A confusion matrix breaks down model errors into four types: True Positives, True Negatives, False Positives, and False Negatives',
       'Precision measures how many positive predictions were correct; Recall measures how many actual positives were found',
       'Linear regression finds the best-fit line through data to predict numerical values',

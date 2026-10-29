@@ -2,7 +2,7 @@ import { CheckCircle2, XCircle, Shield } from 'lucide-react';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Verify Certificate — Cogniwise Artificial Intelligence Literacy',
+  title: 'Verify Certificate | Cogniwise Artificial Intelligence Literacy',
 };
 
 interface VerifiedCertificate {

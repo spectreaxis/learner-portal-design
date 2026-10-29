@@ -158,7 +158,7 @@ export const QuizSection = memo(function QuizSection({ title, questions, quizId,
 
     return (
       <div className="p-6 rounded-2xl bg-card border border-border shadow-sm">
-        <h3 className="text-lg font-semibold text-foreground mb-6">{title} — Results</h3>
+        <h3 className="text-lg font-semibold text-foreground mb-6">{title}: Results</h3>
 
         {submitQuizMutation.isPending ? (
           <div className="text-center py-12">
@@ -201,7 +201,7 @@ export const QuizSection = memo(function QuizSection({ title, questions, quizId,
                 passed ? 'text-success' : 'text-destructive'
               )}>
                 {isAssessment
-                  ? passed ? 'Passed! You earned your certificate.' : 'Not passed — you need at least 80%.'
+                  ? passed ? 'Passed! You earned your certificate.' : 'Not passed. You need at least 80%.'
                   : passed ? 'Great job!' : 'Keep practicing!'}
               </p>
               <p className="text-sm text-muted-foreground mt-1">

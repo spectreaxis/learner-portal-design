@@ -46,7 +46,7 @@ export default function LearnPage() {
           </h2>
           <p className="text-muted-foreground leading-relaxed mb-5">
             This comprehensive course will teach you the fundamentals of Artificial Intelligence and Machine Learning.
-            No prior technical knowledge required — just curiosity and a willingness to learn. By the end, you&apos;ll
+            No prior technical knowledge required, just curiosity and a willingness to learn. By the end, you&apos;ll
             understand how AI works, where it&apos;s used, and how to think critically about it.
           </p>
           <div className="flex flex-wrap gap-3">
