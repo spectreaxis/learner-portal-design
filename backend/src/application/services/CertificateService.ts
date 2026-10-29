@@ -21,19 +21,13 @@ export class CertificateService {
       throw new NotFoundError('Certificate not found');
     }
 
-    // Check payment status
-    const payment = await this.paymentRepo.findByCertificateId(certificate.id);
-
+    // Public endpoint: expose only what a verifier needs, never the learner's
+    // email or payment details
     return {
-      ...certificate,
-      isPaid: payment?.status === 'COMPLETED',
-      payment: payment
-        ? {
-            status: payment.status,
-            amount: payment.amount,
-            mpesaReceiptNumber: payment.mpesaReceiptNumber,
-          }
-        : null,
+      certificateId: certificate.certificateId,
+      earnedAt: certificate.earnedAt,
+      learnerName: certificate.learner?.name,
+      module: certificate.module,
     };
   }
 

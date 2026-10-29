@@ -8,6 +8,13 @@ import { cn } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 
+function findFirstIncompleteLesson(module: { lessons?: { id: string }[] }, learnerData: any) {
+  const completedIds = new Set(
+    learnerData?.progress?.filter((p: any) => p.completed).map((p: any) => p.lessonId) ?? []
+  );
+  return module.lessons?.find((l) => !completedIds.has(l.id));
+}
+
 export default function CertificatePage() {
   const { data: session } = useSession();
   const { data: modules = [], isLoading: modulesLoading } = useModules();
@@ -69,6 +76,7 @@ export default function CertificatePage() {
                   : 0;
                 const isReadyForAssessment = moduleProgress === 100;
                 const lastLesson = module.lessons?.[module.lessons.length - 1];
+                const nextLesson = findFirstIncompleteLesson(module, learnerData);
 
                 return (
                   <div
@@ -108,6 +116,14 @@ export default function CertificatePage() {
                       >
                         <Award className="w-4 h-4" />
                         Take Assessment
+                      </Link>
+                    )}
+                    {moduleProgress > 0 && !isReadyForAssessment && nextLesson && (
+                      <Link
+                        href={`/learn/${module.id}/${nextLesson.id}`}
+                        className="flex items-center justify-center gap-2 w-full px-4 py-2 rounded-lg bg-muted text-foreground text-sm font-medium hover:bg-muted/80 transition-colors"
+                      >
+                        Continue Module
                       </Link>
                     )}
                   </div>
@@ -182,6 +198,7 @@ export default function CertificatePage() {
                 : 0;
               const isReadyForAssessment = moduleProgress === 100;
               const lastLesson = module.lessons?.[module.lessons.length - 1];
+              const nextLesson = findFirstIncompleteLesson(module, learnerData);
 
               return (
                 <div
@@ -231,11 +248,19 @@ export default function CertificatePage() {
                     </div>
                     {isReadyForAssessment && lastLesson && (
                       <Link
-                        href={`/learn/${module.id}/${lastLesson.id}`}
+                        href={`/learn/${module.id}/${lastLesson.id}?tab=certification`}
                         className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm"
                       >
                         <Award className="w-4 h-4" />
                         Take Assessment
+                      </Link>
+                    )}
+                    {moduleProgress > 0 && !isReadyForAssessment && nextLesson && (
+                      <Link
+                        href={`/learn/${module.id}/${nextLesson.id}`}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted text-foreground text-sm font-medium hover:bg-muted/80 transition-colors"
+                      >
+                        Continue Module
                       </Link>
                     )}
                   </div>
@@ -272,7 +297,7 @@ function OldCertificatePage_DELETE_THIS() {
       year: 'numeric'
     }),
     certificateId: learnerData?.id ? 'IIAIC-AIML-2024-00' + learnerData.id.slice(-3) : 'IIAIC-AIML-2024-000',
-    issuer: 'International Institute of AI Competence (IIAIC)',
+    issuer: 'Cogniwise Artificial Intelligence Literacy',
   };
 
   if (isLoading) {
@@ -280,7 +305,7 @@ function OldCertificatePage_DELETE_THIS() {
       <>
         <Header
           title="Certificate"
-          subtitle="IIAIC-verified certification"
+          subtitle="Verified by Cogniwise Artificial Intelligence Literacy"
         />
         <div className="p-6 lg:p-8 max-w-5xl mx-auto">
           <div className="flex items-center justify-center py-32">
@@ -298,7 +323,7 @@ function OldCertificatePage_DELETE_THIS() {
     <>
       <Header
         title="Certificate"
-        subtitle="IIAIC-verified certification"
+        subtitle="Verified by Cogniwise Artificial Intelligence Literacy"
       />
         
         <div className="p-6 lg:p-8 max-w-5xl mx-auto">
@@ -334,9 +359,9 @@ function OldCertificatePage_DELETE_THIS() {
                     </div>
                     <div className="text-left">
                       <p className="text-xs font-semibold text-primary uppercase tracking-widest">
-                        International Institute of
+                        Cogniwise
                       </p>
-                      <p className="text-xl font-bold text-foreground">AI Competence</p>
+                      <p className="text-xl font-bold text-foreground">Artificial Intelligence Literacy</p>
                     </div>
                   </div>
 
@@ -365,7 +390,7 @@ function OldCertificatePage_DELETE_THIS() {
                     {certificateData.learnerName}
                   </p>
                   <p className="text-sm text-muted-foreground mb-10 max-w-md mx-auto">
-                    has successfully completed all modules and assessments of the IIAIC Basic AI/ML Literacy Course
+                    has successfully completed all modules and assessments of the Cogniwise Artificial Intelligence Literacy Basic AI/ML Course
                   </p>
 
                   {/* Modules Completed */}
@@ -415,7 +440,7 @@ function OldCertificatePage_DELETE_THIS() {
                   <div className="mt-10 pt-6 border-t border-border">
                     <p className="text-xs text-muted-foreground flex items-center justify-center gap-2">
                       <Shield className="w-3.5 h-3.5" />
-                      Verified under the IIAIC AI Competence Framework
+                      Verified under the Cogniwise Artificial Intelligence Literacy Framework
                     </p>
                   </div>
                 </div>
@@ -467,13 +492,13 @@ function OldCertificatePage_DELETE_THIS() {
                   <div className="w-5 h-5 rounded-lg bg-success/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-success" />
                   </div>
-                  <span>Issued by the International Institute of AI Competence (IIAIC)</span>
+                  <span>Issued by Cogniwise Artificial Intelligence Literacy</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <div className="w-5 h-5 rounded-lg bg-success/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-success" />
                   </div>
-                  <span>Recognised under the IIAIC AI Competence Framework</span>
+                  <span>Recognised under the Cogniwise Artificial Intelligence Literacy Framework</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <div className="w-5 h-5 rounded-lg bg-success/10 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -506,7 +531,7 @@ function OldCertificatePage_DELETE_THIS() {
                   className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors font-medium"
                 >
                   <ExternalLink className="w-4 h-4" />
-                  Verify at iiaic.org/verify
+                  Verify online
                 </a>
               </div>
             </div>

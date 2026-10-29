@@ -62,6 +62,15 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
 
   const recipientName = session?.user?.name || learnerData?.name || 'Learner';
 
+  // Until payment, the preview must not contain the real certificate details:
+  // a CSS blur alone can be removed or read straight from the page
+  const preview = isPaid
+    ? { recipientName, issueDate, certificateId: certificate.certificateId }
+    : { recipientName: 'Your Name', issueDate: '— — —', certificateId: 'IIAIC-XX-XXXXXXXX' };
+  const verifyUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/verify/${certificate.certificateId}`
+    : `/verify/${certificate.certificateId}`;
+
   const handlePaymentSuccess = () => {
     refetchPayment();
   };
@@ -99,9 +108,10 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
                       moduleTitle={module.title}
                       certificateId={certificate.certificateId}
                       issueDate={issueDate}
+                      verifyUrl={verifyUrl}
                     />
                   }
-                  fileName={`IIAIC-Certificate-Module-${module.number}-${certificate.certificateId}.pdf`}
+                  fileName={`Cogniwise-Artificial-Intelligence-Literacy-Certificate-Module-${module.number}-${certificate.certificateId}.pdf`}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm"
                 >
                   {({ loading }) =>
@@ -165,8 +175,9 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
               {/* Seal */}
               <div className="absolute top-4 right-4 w-20 h-20 rounded-full border-4 border-gold bg-gold/10 flex items-center justify-center">
                 <div className="text-center">
-                  <div className="text-xs font-bold text-gold-foreground">IIAIC</div>
-                  <div className="text-[10px] text-gold-foreground">CERTIFIED</div>
+                  <div className="text-[8px] font-bold leading-tight text-gold-foreground px-1">
+                    COGNIWISE<br />ARTIFICIAL<br />INTELLIGENCE<br />LITERACY
+                  </div>
                 </div>
               </div>
 
@@ -175,9 +186,9 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
                 {/* Logo and Issuer */}
                 <div className="mb-8">
                   <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-1">
-                    INTERNATIONAL INSTITUTE OF
+                    COGNIWISE
                   </p>
-                  <p className="text-3xl font-bold text-foreground mb-6">AI COMPETENCE</p>
+                  <p className="text-3xl font-bold text-foreground mb-6">ARTIFICIAL INTELLIGENCE LITERACY</p>
                   <p className="text-xs text-muted-foreground uppercase tracking-[0.25em]">
                     Certificate of Completion
                   </p>
@@ -202,12 +213,12 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
                   This is to certify that
                 </p>
                 <p className="text-4xl md:text-5xl font-bold text-primary mb-4">
-                  {recipientName}
+                  {preview.recipientName}
                 </p>
 
                 <p className="text-base text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
                   has successfully completed all lessons and assessments of{' '}
-                  <strong>{module.title}</strong> in the IIAIC Basic AI/ML Literacy Course,
+                  <strong>{module.title}</strong> in the Cogniwise Artificial Intelligence Literacy Basic AI/ML Course,
                   demonstrating comprehensive understanding and practical knowledge of the subject matter.
                 </p>
 
@@ -217,7 +228,7 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
                     <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                       Date of Issue
                     </p>
-                    <p className="text-base font-semibold text-foreground">{issueDate}</p>
+                    <p className="text-base font-semibold text-foreground">{preview.issueDate}</p>
                   </div>
                   <div className="hidden md:block h-10 w-px bg-border" />
                   <div className="text-center">
@@ -225,7 +236,7 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
                       Certificate ID
                     </p>
                     <p className="text-base font-semibold text-foreground font-mono">
-                      {certificate.certificateId}
+                      {preview.certificateId}
                     </p>
                   </div>
                   <div className="hidden md:block h-10 w-px bg-border" />
@@ -241,10 +252,10 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
                 <div className="mt-10 pt-6 border-t border-border">
                   <p className="text-xs text-muted-foreground flex items-center justify-center gap-2 mb-2">
                     <Shield className="w-3.5 h-3.5" />
-                    Verified under the IIAIC AI Competence Framework
+                    Verified under the Cogniwise Artificial Intelligence Literacy Framework
                   </p>
                   <p className="text-[10px] text-muted-foreground">
-                    Verify at iiaic.org/verify • This certificate demonstrates foundational AI/ML literacy
+                    Verify at {isPaid ? verifyUrl : '—'} • This certificate demonstrates foundational AI/ML literacy
                   </p>
                 </div>
               </div>

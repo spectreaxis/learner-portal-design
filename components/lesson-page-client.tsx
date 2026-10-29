@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
+  LayoutGrid,
   X,
   CheckCircle2,
   BookOpen,
@@ -21,7 +22,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Module, Lesson } from '@/lib/types';
-import { useUpdateProgress, useCompleteActivity } from '@/lib/hooks/useLearner';
+import { useUpdateProgress, useCompleteActivity, useLearnerProgress } from '@/lib/hooks/useLearner';
+import { useMobileSidebar } from '@/components/auth-layout';
 
 // Code splitting: Lazy load QuizSection (heavy component with form logic)
 const QuizSection = dynamic(
@@ -50,7 +52,14 @@ interface LessonPageClientProps {
   moduleId: string;
   lessonId: string;
   lessonIndex: number;
-  currentLessonIndex: number;
+}
+
+// Self-check quiz titles name the lessons they cover, e.g. "(Lessons 1–3)" or "(Lesson 6)".
+// Returns the 1-based number of the last lesson covered, so the quiz shows after it.
+function lastLessonCoveredByQuiz(title: string): number | null {
+  const match = title.match(/Lessons?\s+(\d+)(?:\s*[–-]\s*(\d+))?/);
+  if (!match) return null;
+  return Number(match[2] ?? match[1]);
 }
 
 export function LessonPageClient({
@@ -59,14 +68,20 @@ export function LessonPageClient({
   moduleId,
   lessonId,
   lessonIndex,
-  currentLessonIndex,
 }: LessonPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const updateProgressMutation = useUpdateProgress();
   const completeActivityMutation = useCompleteActivity();
+  const { data: learnerData } = useLearnerProgress();
+
+  const completedLessonIds = new Set<string>(
+    learnerData?.progress?.filter((p: any) => p.completed).map((p: any) => p.lessonId) ?? []
+  );
+  const completedLessonCount = module.lessons.filter(l => completedLessonIds.has(l.id)).length;
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { setOpen: setMobileNavOpen } = useMobileSidebar();
   const [activeTab, setActiveTab] = useState<ContentTab>('lesson');
   const [activityCompleted, setActivityCompleted] = useState(false);
 
@@ -81,9 +96,10 @@ export function LessonPageClient({
   const prevLesson = lessonIndex > 0 ? module.lessons[lessonIndex - 1] : null;
   const nextLesson = lessonIndex < module.lessons.length - 1 ? module.lessons[lessonIndex + 1] : null;
 
-  // Find relevant quiz for this lesson
-  const relevantQuizIndex = Math.floor(lessonIndex / 3);
-  const relevantQuiz = module.selfCheckQuizzes?.[relevantQuizIndex];
+  // Show a self-check quiz on the last lesson it covers
+  const relevantQuiz = module.selfCheckQuizzes?.find(
+    quiz => lastLessonCoveredByQuiz(quiz.title) === lessonIndex + 1
+  );
 
   // Check if this is the last lesson (show activity/certification)
   const isLastLesson = lessonIndex === module.lessons.length - 1;
@@ -104,13 +120,20 @@ export function LessonPageClient({
         <button
           onClick={() => setSidebarOpen(true)}
           className="p-2 rounded-xl hover:bg-muted transition-colors"
+          aria-label="Open lesson list"
         >
           <Menu className="w-5 h-5 text-foreground" />
         </button>
         <span className="text-sm font-medium text-foreground truncate mx-4">
           {lesson.title}
         </span>
-        <div className="w-9" />
+        <button
+          onClick={() => setMobileNavOpen(true)}
+          className="p-2 rounded-xl hover:bg-muted transition-colors"
+          aria-label="Open main menu"
+        >
+          <LayoutGrid className="w-5 h-5 text-foreground" />
+        </button>
       </div>
 
       {/* Mobile Lesson Sidebar */}
@@ -136,7 +159,7 @@ export function LessonPageClient({
                   key={l.id}
                   lesson={l}
                   index={i}
-                  isCompleted={i < currentLessonIndex}
+                  isCompleted={completedLessonIds.has(l.id)}
                   isCurrent={l.id === lessonId}
                   moduleId={moduleId}
                 />
@@ -146,10 +169,11 @@ export function LessonPageClient({
         </div>
       )}
 
-      <main className="md:ml-[260px] transition-all duration-300">
+      {/* The app layout already offsets content for the main sidebar */}
+      <div>
         <div className="flex min-h-screen">
           {/* Lesson Content Area */}
-          <div className="flex-1 flex flex-col pt-14 md:pt-0">
+          <div className="flex-1 min-w-0 flex flex-col pt-14 md:pt-0">
             {/* Top Progress Bar */}
             <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border">
               <div className="px-6 py-4">
@@ -316,15 +340,15 @@ export function LessonPageClient({
                   </div>
 
                   {/* Readiness Check */}
-                  {currentLessonIndex < module.lessons.length && (
+                  {completedLessonCount < module.lessons.length && (
                     <div className="p-5 rounded-2xl bg-warning/10 border border-warning/30 mb-6">
                       <div className="flex items-start gap-3">
                         <Award className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
                         <div>
                           <h3 className="font-semibold text-foreground mb-1">Complete All Lessons First</h3>
                           <p className="text-sm text-muted-foreground leading-relaxed">
-                            We recommend completing all {module.lessons.length} lessons before taking the certification assessment.
-                            You&apos;ve completed {currentLessonIndex} of {module.lessons.length} lessons so far.
+                            We recommend completing all {module.lessons.length} lessons before taking the certification assessment.{' '}
+                            You&apos;ve completed {completedLessonCount} of {module.lessons.length} lessons so far.
                           </p>
                         </div>
                       </div>
@@ -336,6 +360,7 @@ export function LessonPageClient({
                     questions={module.certificationAssessment.questions}
                     quizId={module.certificationAssessment.id}
                     moduleId={moduleId}
+                    isAssessment
                     onComplete={(score, maxScore, certificate) => {
                       const percentage = Math.round((score / maxScore) * 100);
                       if (percentage >= 80 && certificate) {
@@ -347,8 +372,8 @@ export function LessonPageClient({
                   <div className="p-5 rounded-2xl bg-gradient-to-br from-gold/5 via-gold/[0.02] to-transparent border border-gold/20">
                     <h3 className="font-semibold text-foreground mb-2">Certificate of Completion</h3>
                     <p className="text-sm text-muted-foreground">
-                      Upon passing this assessment with 80% or higher, you will receive an IIAIC-verified certificate recognised
-                      globally under the IIAIC AI Competence Framework.
+                      Upon passing this assessment with 80% or higher, you will receive a certificate verified by Cogniwise Artificial Intelligence Literacy,
+                      recognised under the Cogniwise Artificial Intelligence Literacy Framework.
                     </p>
                   </div>
                 </div>
@@ -447,7 +472,7 @@ export function LessonPageClient({
                   key={l.id}
                   lesson={l}
                   index={i}
-                  isCompleted={i < currentLessonIndex}
+                  isCompleted={completedLessonIds.has(l.id)}
                   isCurrent={l.id === lessonId}
                   moduleId={moduleId}
                 />
@@ -455,7 +480,7 @@ export function LessonPageClient({
             </div>
           </aside>
         </div>
-      </main>
+      </div>
     </>
   );
 }

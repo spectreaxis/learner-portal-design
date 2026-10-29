@@ -42,7 +42,8 @@ router.get('/progress', async (req: AuthRequest, res) => {
   try {
     const learner = await learnerService.getProgress(req.userId!);
 
-    res.setHeader('Cache-Control', 'private, max-age=60');
+    // Progress changes after every lesson and quiz; a cached copy shows stale data
+    res.setHeader('Cache-Control', 'no-store');
     res.json(learner);
   } catch (error: any) {
     console.error('Progress fetch error:', error);

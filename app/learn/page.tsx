@@ -17,7 +17,7 @@ export default function LearnPage() {
       <>
         <Header
           title="Course Overview"
-          subtitle="IIAIC Basic AI/ML Literacy Course"
+          subtitle="Cogniwise Artificial Intelligence Literacy Basic AI/ML Course"
         />
         <div className="flex items-center justify-center py-32">
           <div className="text-center">
@@ -35,7 +35,7 @@ export default function LearnPage() {
     <>
       <Header
         title="Course Overview"
-        subtitle="IIAIC Basic AI/ML Literacy Course"
+        subtitle="Cogniwise Artificial Intelligence Literacy Basic AI/ML Course"
       />
 
       <div className="p-6 lg:p-8 max-w-7xl mx-auto">
@@ -86,17 +86,12 @@ export default function LearnPage() {
               (cert: any) => cert.module?.number === module.number - 1
             );
 
-            // Find current lesson
-            const currentLessonProgress = learnerData?.progress?.find(
-              (p: any) => p.lesson?.moduleId === module.id && !p.completed
-            );
-
             return (
               <ModuleCard
                 key={module.id}
                 module={module}
                 progress={moduleProgress}
-                currentLessonId={currentLessonProgress?.lessonId}
+                completedLessons={completedInModule}
                 isActive={moduleProgress > 0 && moduleProgress < 100}
                 isLocked={isLocked}
               />
@@ -113,8 +108,8 @@ export default function LearnPage() {
             <div>
               <h3 className="font-semibold text-foreground mb-1">Earn Your Certificate</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Complete all modules and pass the certification assessments to receive your IIAIC-verified
-                certificate, recognised globally under the IIAIC AI Competence Framework.
+                Complete all modules and pass the certification assessments to receive your certificate verified by
+                Cogniwise Artificial Intelligence Literacy, recognised under the Cogniwise Artificial Intelligence Literacy Framework.
               </p>
             </div>
           </div>

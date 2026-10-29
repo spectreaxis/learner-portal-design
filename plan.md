@@ -154,7 +154,7 @@ export const Sidebar = memo(function Sidebar() {
         </div>
         {!collapsed && (
           <div className="flex flex-col overflow-hidden">
-            <span className="text-foreground font-semibold text-base tracking-tight">IIAIC</span>
+            <span className="text-foreground font-semibold text-base tracking-tight">Cogniwise Artificial Intelligence Literacy</span>
             <span className="text-muted-foreground text-xs">Learning Portal</span>
           </div>
         )}
@@ -1342,7 +1342,7 @@ export default async function LearnPage() {
   return (
     <div className="min-h-screen bg-background">
       <Header
-        title="IIAIC AI/ML Literacy Course"
+        title="Cogniwise Artificial Intelligence Literacy AI/ML Course"
         subtitle="Learn how AI is already transforming your world"
       />
       <main className="p-6 lg:p-8 max-w-7xl mx-auto">

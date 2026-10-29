@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fecaca',
   },
   sealText: {
-    fontSize: 9,
+    fontSize: 7,
     color: '#7f1d1d',
     fontFamily: 'Times-Bold',
     textAlign: 'center',
@@ -242,6 +242,7 @@ interface CertificatePDFProps {
   moduleTitle: string;
   certificateId: string;
   issueDate: string;
+  verifyUrl: string;
 }
 
 export const CertificatePDF: React.FC<CertificatePDFProps> = ({
@@ -250,6 +251,7 @@ export const CertificatePDF: React.FC<CertificatePDFProps> = ({
   moduleTitle,
   certificateId,
   issueDate,
+  verifyUrl,
 }) => (
   <Document>
     <Page size="A4" orientation="landscape" style={styles.page}>
@@ -266,15 +268,15 @@ export const CertificatePDF: React.FC<CertificatePDFProps> = ({
             <View style={styles.seal}>
               <View style={styles.sealInner}>
                 <Text style={styles.sealText}>
-                  IIAIC{'\n'}VERIFIED{'\n'}CERTIFICATE
+                  COGNIWISE{'\n'}ARTIFICIAL{'\n'}INTELLIGENCE{'\n'}LITERACY
                 </Text>
               </View>
             </View>
 
             {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.logoText}>INTERNATIONAL INSTITUTE OF</Text>
-              <Text style={styles.instituteName}>AI Competence</Text>
+              <Text style={styles.logoText}>COGNIWISE</Text>
+              <Text style={styles.instituteName}>Artificial Intelligence Literacy</Text>
               <Text style={styles.certificateLabel}>~ Certificate of Completion ~</Text>
             </View>
 
@@ -295,7 +297,7 @@ export const CertificatePDF: React.FC<CertificatePDFProps> = ({
                 in recognition of demonstrating comprehensive understanding and mastery
                 of the subject matter through completion of all course lessons and
                 achieving a passing score on the certification assessment as part of
-                the IIAIC Basic AI/ML Literacy Program.
+                the Cogniwise Artificial Intelligence Literacy Basic AI/ML Program.
               </Text>
 
               {/* Details */}
@@ -322,13 +324,13 @@ export const CertificatePDF: React.FC<CertificatePDFProps> = ({
                   <View style={styles.signatureLine} />
                   <Text style={styles.signatureName}>Dr. Sarah Mitchell</Text>
                   <Text style={styles.signatureTitle}>Director of Education</Text>
-                  <Text style={styles.signatureLabel}>IIAIC</Text>
+                  <Text style={styles.signatureLabel}>Cogniwise Artificial Intelligence Literacy</Text>
                 </View>
                 <View style={styles.signatureBox}>
                   <View style={styles.signatureLine} />
                   <Text style={styles.signatureName}>Prof. James Chen</Text>
                   <Text style={styles.signatureTitle}>Chief Academic Officer</Text>
-                  <Text style={styles.signatureLabel}>IIAIC</Text>
+                  <Text style={styles.signatureLabel}>Cogniwise Artificial Intelligence Literacy</Text>
                 </View>
               </View>
             </View>
@@ -336,7 +338,7 @@ export const CertificatePDF: React.FC<CertificatePDFProps> = ({
             {/* Footer */}
             <View style={styles.footer}>
               <Text>
-                This certificate is issued under the IIAIC AI Competence Framework • Verify authenticity at iiaic.org/verify
+                This certificate is issued under the Cogniwise Artificial Intelligence Literacy Framework • Verify authenticity at {verifyUrl}
               </Text>
             </View>
           </View>

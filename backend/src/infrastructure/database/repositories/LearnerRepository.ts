@@ -23,8 +23,13 @@ export class LearnerRepository extends BaseRepository<Learner> {
     super('learner', dataProvider);
   }
 
+  // Case-insensitive so accounts created before emails were normalised still match
   async findByEmail(email: string): Promise<Learner | null> {
-    return this.dataProvider.findUnique<Learner>(this.model, { email });
+    const [learner] = await this.dataProvider.findMany<Learner>(this.model, {
+      where: { email: { equals: email.trim(), mode: 'insensitive' } },
+      take: 1,
+    });
+    return learner ?? null;
   }
 
   async findWithProgress(learnerId: string): Promise<any> {
@@ -45,10 +50,25 @@ export class LearnerRepository extends BaseRepository<Learner> {
   }
 
   async updateActivity(learnerId: string): Promise<void> {
+    const learner = await this.findById(learnerId);
+    if (!learner) return;
+
+    const now = new Date();
+    const daysSinceLast = daysBetween(learner.lastActivityAt, now);
+
+    // Same day keeps the streak (but starts it if this is the first activity),
+    // the next day extends it, and any longer gap restarts it
+    const currentStreak =
+      daysSinceLast === 0
+        ? Math.max(learner.currentStreak, 1)
+        : daysSinceLast === 1
+        ? learner.currentStreak + 1
+        : 1;
+
     await this.dataProvider.update(
       this.model,
       { id: learnerId },
-      { lastActivityAt: new Date() }
+      { lastActivityAt: now, currentStreak }
     );
   }
 
@@ -58,4 +78,11 @@ export class LearnerRepository extends BaseRepository<Learner> {
   ): Promise<Learner> {
     return this.dataProvider.update<Learner>(this.model, { id: learnerId }, data);
   }
+}
+
+/** Number of calendar days (UTC) between two dates */
+export function daysBetween(from: Date, to: Date): number {
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
+  const startOfDay = (d: Date) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  return Math.round((startOfDay(new Date(to)) - startOfDay(new Date(from))) / MS_PER_DAY);
 }

@@ -46,8 +46,10 @@ app.use('/api', rateLimiter);
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/modules', moduleRoutes);
+// Public certificate verification must be mounted before learnerRoutes,
+// whose authenticate middleware would otherwise reject it
+app.use('/api/learner', certificateRouter);
 app.use('/api/learner', learnerRoutes);
-app.use('/api/learner', certificateRouter); // Public certificate verification
 app.use('/api/payment', paymentRoutes); // M-Pesa payment routes
 
 // Health check
