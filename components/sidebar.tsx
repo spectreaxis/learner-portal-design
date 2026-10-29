@@ -15,6 +15,7 @@ import {
   GraduationCap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useMobileSidebar } from './auth-layout';
 
 // Move outside component - static data (fixes performance issue)
 const NAV_ITEMS = [
@@ -27,6 +28,7 @@ const NAV_ITEMS = [
 export const Sidebar = memo(function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const { open: mobileOpen, setOpen: setMobileOpen } = useMobileSidebar();
   const { data: learnerData } = useLearnerProgress();
 
   const currentStreak = learnerData?.currentStreak || 0;
@@ -39,13 +41,22 @@ export const Sidebar = memo(function Sidebar() {
   // Memoize container classes
   const containerClasses = useMemo(
     () => cn(
-      'fixed left-0 top-0 z-40 h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300 flex flex-col',
+      'fixed left-0 top-0 z-[60] h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300 flex flex-col',
+      // Off-canvas on small screens until opened from the header menu button
+      mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
       collapsed ? 'w-[72px]' : 'w-[260px]'
     ),
-    [collapsed]
+    [collapsed, mobileOpen]
   );
 
   return (
+    <>
+    {mobileOpen && (
+      <div
+        className="md:hidden fixed inset-0 z-[55] bg-background/80 backdrop-blur-sm"
+        onClick={() => setMobileOpen(false)}
+      />
+    )}
     <aside className={containerClasses}>
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 h-[72px] border-b border-sidebar-border">
@@ -54,7 +65,7 @@ export const Sidebar = memo(function Sidebar() {
         </div>
         {!collapsed && (
           <div className="flex flex-col overflow-hidden">
-            <span className="text-foreground font-semibold text-base tracking-tight">IIAIC</span>
+            <span className="text-foreground font-semibold text-sm leading-tight tracking-tight">Cogniwise Artificial Intelligence Literacy</span>
             <span className="text-muted-foreground text-xs">Learning Portal</span>
           </div>
         )}
@@ -112,5 +123,6 @@ export const Sidebar = memo(function Sidebar() {
         {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
       </button>
     </aside>
+    </>
   );
 });

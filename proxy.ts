@@ -13,10 +13,11 @@ export const config = {
          * - /api (API routes)
          * - /login (login page)
          * - /register (register page)
+         * - /verify (public certificate verification)
          * - /_next (Next.js internals)
          * - /static (static files)
          * - /*.* (files with extensions like .png, .jpg, etc.)
          */
-        '/((?!api|login|register|_next|static|.*\\..*).*)',
+        '/((?!api|login|register|verify|_next|static|.*\\..*).*)',
     ],
 };

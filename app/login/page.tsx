@@ -6,6 +6,19 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { GraduationCap, Mail, Lock, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
 
+// callbackUrl may be absolute (set by the auth proxy); accept it only if it points at this origin
+function getSafeCallbackPath(): string {
+  const callbackUrl = new URLSearchParams(window.location.search).get('callbackUrl');
+  if (!callbackUrl) return '/';
+  try {
+    const url = new URL(callbackUrl, window.location.origin);
+    if (url.origin !== window.location.origin || url.pathname.startsWith('/login')) return '/';
+    return url.pathname + url.search;
+  } catch {
+    return '/';
+  }
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -32,8 +45,8 @@ export default function LoginPage() {
         return;
       }
 
-      // Redirect to dashboard on success
-      router.push('/');
+      // Return to the page that required login, but only within this site
+      router.push(getSafeCallbackPath());
       router.refresh();
     } catch (err) {
       setError('Something went wrong. Please try again.');
@@ -49,7 +62,7 @@ export default function LoginPage() {
           <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center shadow-lg mb-4">
             <GraduationCap className="w-8 h-8 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">IIAIC Learning Portal</h1>
+          <h1 className="text-2xl font-bold text-foreground">Cogniwise Artificial Intelligence Literacy</h1>
           <p className="text-muted-foreground text-sm mt-1">Sign in to continue your learning</p>
         </div>
 

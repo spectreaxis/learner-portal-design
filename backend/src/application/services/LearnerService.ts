@@ -1,4 +1,4 @@
-import { LearnerRepository } from '../../infrastructure/database/repositories/LearnerRepository';
+import { LearnerRepository, daysBetween } from '../../infrastructure/database/repositories/LearnerRepository';
 import { ProgressRepository } from '../../infrastructure/database/repositories/ProgressRepository';
 import {
   NotFoundError,
@@ -25,7 +25,12 @@ export class LearnerService {
       throw new NotFoundError('Learner not found');
     }
 
-    return learner;
+    // Never send the password hash to the client
+    const { password: _password, ...safeLearner } = learner;
+
+    // A streak is broken once a full day passes with no activity
+    const streakBroken = daysBetween(learner.lastActivityAt, new Date()) > 1;
+    return { ...safeLearner, currentStreak: streakBroken ? 0 : learner.currentStreak };
   }
 
   async updateLessonProgress(learnerId: string, lessonId: string, completed: boolean) {
@@ -64,7 +69,10 @@ export class LearnerService {
     }
 
     // Update profile
-    const updatedLearner = await this.learnerRepo.updateProfile(learnerId, data);
+    const updatedLearner = await this.learnerRepo.updateProfile(learnerId, {
+      ...data,
+      email: data.email?.trim().toLowerCase(),
+    });
 
     return {
       id: updatedLearner.id,

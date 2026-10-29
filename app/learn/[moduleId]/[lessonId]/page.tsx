@@ -83,9 +83,6 @@ export default async function LessonPage({ params }: LessonPageProps) {
     notFound();
   }
 
-  // For now, use default values for progress (will be fetched from API with auth later)
-  const currentLessonIndex = 0;
-
   return (
     <LessonPageClient
       lesson={lesson}
@@ -93,7 +90,6 @@ export default async function LessonPage({ params }: LessonPageProps) {
       moduleId={moduleId}
       lessonId={lessonId}
       lessonIndex={lessonIndex}
-      currentLessonIndex={currentLessonIndex}
     />
   );
 }

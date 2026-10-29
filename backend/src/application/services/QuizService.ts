@@ -131,7 +131,7 @@ export class QuizService {
           learnerId,
           moduleId: certification.moduleId,
           certificateId,
-          verificationUrl: `${process.env.APP_URL || 'http://localhost:3000'}/certificate/${certificateId}`,
+          verificationUrl: `${process.env.APP_URL || 'http://localhost:3000'}/verify/${certificateId}`,
         });
       } else {
         certificateRecord = existingCertificate;

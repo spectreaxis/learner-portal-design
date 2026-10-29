@@ -5,6 +5,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Bell, Search, User, Menu, Settings, LogOut, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useMobileSidebar } from './auth-layout';
 
 interface HeaderProps {
   title?: string;
@@ -16,6 +17,7 @@ export function Header({ title, subtitle, className }: HeaderProps) {
   const { data: session } = useSession();
   const router = useRouter();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const { setOpen: setMobileSidebarOpen } = useMobileSidebar();
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close menu when clicking outside
@@ -44,16 +46,20 @@ export function Header({ title, subtitle, className }: HeaderProps) {
 
   return (
     <header className={cn(
-      'sticky top-0 z-30 flex items-center justify-between h-[72px] px-6 border-b border-border bg-background/80 backdrop-blur-md',
+      'sticky top-0 z-30 flex items-center justify-between gap-4 h-[72px] px-4 md:px-6 border-b border-border bg-background/80 backdrop-blur-md',
       className
     )}>
-      <div className="flex items-center gap-4">
-        <button className="md:hidden p-2 -ml-2 rounded-lg hover:bg-muted transition-colors">
+      <div className="flex items-center gap-4 min-w-0">
+        <button
+          onClick={() => setMobileSidebarOpen(true)}
+          className="md:hidden p-2 -ml-2 rounded-lg hover:bg-muted transition-colors"
+          aria-label="Open menu"
+        >
           <Menu className="w-5 h-5 text-muted-foreground" />
         </button>
-        <div>
-          {title && <h1 className="text-xl font-semibold text-foreground tracking-tight">{title}</h1>}
-          {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+        <div className="min-w-0">
+          {title && <h1 className="text-xl font-semibold text-foreground tracking-tight truncate">{title}</h1>}
+          {subtitle && <p className="text-sm text-muted-foreground truncate">{subtitle}</p>}
         </div>
       </div>
 

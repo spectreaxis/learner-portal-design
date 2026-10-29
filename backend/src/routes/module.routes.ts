@@ -59,7 +59,10 @@ router.get('/:moduleId', async (req, res) => {
       certificationAssessment: module.certifications?.[0]
         ? {
             id: module.certifications[0].id,
-            questions: ((module.certifications[0].content as Record<string, any>)?.questions || []) as any[],
+            // Strip the answer key: certification is scored server-side only
+            questions: (((module.certifications[0].content as Record<string, any>)?.questions || []) as any[])
+              .map(({ answer: _answer, explanation: _explanation, ...question }) => question),
+            requiredScore: module.certifications[0].requiredScore,
           }
         : undefined,
     };

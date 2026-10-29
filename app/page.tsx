@@ -32,9 +32,10 @@ export default function Dashboard() {
   const completedLessons = learnerData?.progress?.filter((p: any) => p.completed).length || 0;
   const overallProgress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
 
-  // Find current module (first incomplete)
-  const currentModuleProgress = learnerData?.progress?.find((p: any) => !p.completed);
-  const currentModule = modules.find(m => m.id === currentModuleProgress?.moduleId) || modules[0];
+  // Current module is the first one without a certificate (later modules stay locked until then)
+  const currentModule = modules.find(
+    m => !learnerData?.certificates?.some((cert: any) => cert.moduleId === m.id)
+  ) || modules[modules.length - 1];
 
   // Determine if user has started learning (has any completed lessons or in-progress)
   const hasStarted = completedLessons > 0 || (learnerData?.progress && learnerData.progress.length > 0);
@@ -162,7 +163,6 @@ export default function Dashboard() {
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
               {modules.slice(0, 4).map((module) => {
-                const progress = learnerData?.progress?.find((p: any) => p.moduleId === module.id);
                 const moduleLessons = module.lessons?.length || 0;
                 const completedInModule = learnerData?.progress?.filter(
                   (p: any) => p.lesson?.moduleId === module.id && p.completed
@@ -181,8 +181,8 @@ export default function Dashboard() {
                     key={module.id}
                     module={module}
                     progress={moduleProgress}
-                    currentLessonId={progress?.lessonId}
-                    isActive={module.id === currentModuleProgress?.moduleId}
+                    completedLessons={completedInModule}
+                    isActive={module.id === currentModule?.id}
                     isLocked={isLocked}
                   />
                 );

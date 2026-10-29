@@ -3,7 +3,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* IIAIC Learning Portal - Clean professional light theme */
+/* Cogniwise Artificial Intelligence Literacy Learning Portal - Clean professional light theme */
 :root {
   --background: oklch(0.985 0 0);
   --foreground: oklch(0.145 0.015 250);

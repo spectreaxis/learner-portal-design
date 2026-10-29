@@ -23,8 +23,13 @@ export function ModulePageClient({ module, moduleId }: ModulePageClientProps) {
     (p: any) => p.lesson.moduleId === moduleId && p.completed
   ) || [];
 
-  const currentLessonIndex = progressInModule.length;
-  const moduleProgress = Math.round((currentLessonIndex / (module.lessons?.length || 1)) * 100);
+  const completedLessonIds = new Set<string>(progressInModule.map((p: any) => p.lessonId));
+  const completedLessonCount = progressInModule.length;
+  const moduleProgress = Math.round((completedLessonCount / (module.lessons?.length || 1)) * 100);
+
+  // Resume at the first lesson not yet completed (or the last lesson once all are done)
+  const firstIncompleteIndex = module.lessons?.findIndex(l => !completedLessonIds.has(l.id)) ?? 0;
+  const currentLessonIndex = firstIncompleteIndex === -1 ? module.lessons.length - 1 : firstIncompleteIndex;
 
   // Check if module has a certificate
   const hasCertificate = learnerData?.certificates?.some(
@@ -95,7 +100,7 @@ export function ModulePageClient({ module, moduleId }: ModulePageClientProps) {
           <div className="mb-5">
             <div className="flex justify-between text-sm mb-2">
               <span className="text-muted-foreground">
-                {currentLessonIndex} of {module.lessons?.length || 0} lessons
+                {completedLessonCount} of {module.lessons?.length || 0} lessons
               </span>
               <span className="text-primary font-semibold">{moduleProgress}%</span>
             </div>
@@ -104,7 +109,7 @@ export function ModulePageClient({ module, moduleId }: ModulePageClientProps) {
 
           {module.lessons && module.lessons.length > 0 && (
             <Link
-              href={`/learn/${moduleId}/${module.lessons[Math.min(currentLessonIndex, module.lessons.length - 1)].id}`}
+              href={`/learn/${moduleId}/${module.lessons[currentLessonIndex].id}`}
               className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors shadow-sm"
             >
               {moduleProgress > 0 ? 'Continue Learning' : 'Start Module'}
@@ -149,7 +154,7 @@ export function ModulePageClient({ module, moduleId }: ModulePageClientProps) {
                 key={lesson.id}
                 lesson={lesson}
                 index={index}
-                isCompleted={index < currentLessonIndex}
+                isCompleted={completedLessonIds.has(lesson.id)}
                 isCurrent={index === currentLessonIndex}
                 moduleId={moduleId}
               />
@@ -202,7 +207,7 @@ export function ModulePageClient({ module, moduleId }: ModulePageClientProps) {
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
               Complete all {module.lessons?.length || 0} lessons, then take the final assessment on Lesson {module.lessons?.length || 6}.
-              Score 80% or higher to earn your IIAIC-verified certificate.
+              Score 80% or higher to earn your certificate verified by Cogniwise Artificial Intelligence Literacy.
             </p>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span className="px-2 py-1 rounded bg-gold/10 text-gold font-medium">

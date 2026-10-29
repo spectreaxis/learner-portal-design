@@ -29,7 +29,7 @@ export class AuthService {
       throw new ValidationError('Name must be at least 2 characters');
     }
 
-    return this.authProvider.register(email, password, name);
+    return this.authProvider.register(email.trim().toLowerCase(), password, name.trim());
   }
 
   async login(email: string, password: string) {
@@ -37,7 +37,7 @@ export class AuthService {
       throw new ValidationError('Email and password are required');
     }
 
-    return this.authProvider.login(email, password);
+    return this.authProvider.login(email.trim().toLowerCase(), password);
   }
 
   async verifyToken(token: string) {

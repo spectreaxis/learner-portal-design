@@ -370,4 +370,4 @@ Automatically handles:
 
 ---
 
-**Built with ❤️ for International Institute of AI Competency**
+**Built with ❤️ for Cogniwise Artificial Intelligence Literacy**

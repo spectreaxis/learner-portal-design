@@ -9,16 +9,12 @@ import { ProgressBar } from './progress';
 interface ModuleCardProps {
   module: Module;
   progress: number;
-  currentLessonId?: string;
+  completedLessons: number;
   isActive?: boolean;
   isLocked?: boolean;
 }
 
-export function ModuleCard({ module, progress, currentLessonId, isActive, isLocked }: ModuleCardProps) {
-  const currentLessonIndex = currentLessonId
-    ? module.lessons.findIndex(l => l.id === currentLessonId)
-    : 0;
-  const completedLessons = currentLessonIndex;
+export function ModuleCard({ module, progress, completedLessons, isActive, isLocked }: ModuleCardProps) {
   const isCompleted = progress === 100;
 
   return (

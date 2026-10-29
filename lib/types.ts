@@ -10,7 +10,8 @@ export interface QuizQuestion {
   id: string;
   question: string;
   options?: { label: string; text: string }[];
-  answer: string;
+  /** Omitted for certification questions, which are scored server-side */
+  answer?: string;
   explanation?: string;
   type: 'multiple-choice' | 'true-false' | 'short-answer';
 }
