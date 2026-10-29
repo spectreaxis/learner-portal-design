@@ -23,6 +23,14 @@ export interface QuizSubmission {
   submittedAt: Date;
 }
 
+export interface LatestQuizResult {
+  score: number;
+  maxScore: number;
+  passed: boolean;
+  answers: Record<string, string>;
+  submittedAt: Date;
+}
+
 /**
  * Quiz Repository
  *
@@ -37,7 +45,8 @@ export class QuizRepository extends BaseRepository<Quiz> {
   async findByModuleId(moduleId: string): Promise<Quiz[]> {
     return this.dataProvider.findMany<Quiz>(this.model, {
       where: { moduleId },
-      orderBy: { order: 'asc' },
+      // Quiz has no order column; titles are numbered ("Self-Check Quiz 1", "2", ...)
+      orderBy: { title: 'asc' },
     });
   }
 
@@ -54,6 +63,39 @@ export class QuizRepository extends BaseRepository<Quiz> {
       ...data,
       submittedAt: new Date(),
     });
+  }
+
+  /**
+   * The learner's most recent submission for each quiz and certification,
+   * keyed by quiz or certification ID, so finished attempts can be shown again
+   */
+  async findLatestResults(learnerId: string): Promise<Record<string, LatestQuizResult>> {
+    const submissions = await this.dataProvider.findMany<QuizSubmission>('quizSubmission', {
+      where: { learnerId },
+      orderBy: { submittedAt: 'desc' },
+    });
+
+    const latest: Record<string, LatestQuizResult> = {};
+    for (const s of submissions) {
+      const key = s.quizId ?? s.certificationId;
+      if (!key || latest[key]) continue;
+      latest[key] = {
+        score: s.score,
+        maxScore: s.maxScore,
+        passed: s.passed,
+        answers: s.answers,
+        submittedAt: s.submittedAt,
+      };
+    }
+    return latest;
+  }
+
+  /** IDs of self-check quizzes the learner has passed at least once */
+  async findPassedQuizIds(learnerId: string): Promise<string[]> {
+    const submissions = await this.dataProvider.findMany<QuizSubmission>('quizSubmission', {
+      where: { learnerId, passed: true, quizId: { not: null } },
+    });
+    return [...new Set(submissions.map((s) => s.quizId))];
   }
 
   async findSubmissionsByLearner(learnerId: string): Promise<QuizSubmission[]> {

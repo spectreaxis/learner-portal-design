@@ -55,18 +55,19 @@ model Quiz {
 }
 
 model Learner {
-  id              String           @id @default(cuid())
-  email           String           @unique
-  password        String
-  name            String
-  avatar          String?
-  enrolledAt      DateTime         @default(now())
-  currentStreak   Int              @default(0)
-  lastActivityAt  DateTime         @default(now())
-  certificates    Certificate[]
-  progress        LessonProgress[]
-  quizSubmissions QuizSubmission[]
-  payments        Payment[]
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  password            String
+  name                String
+  avatar              String?
+  enrolledAt          DateTime             @default(now())
+  currentStreak       Int                  @default(0)
+  lastActivityAt      DateTime             @default(now())
+  certificates        Certificate[]
+  progress            LessonProgress[]
+  quizSubmissions     QuizSubmission[]
+  payments            Payment[]
+  activityCompletions ActivityCompletion[]
 
   @@index([email])
 }
@@ -106,14 +107,14 @@ model QuizSubmission {
 }
 
 model Certificate {
-  id              String    @id @default(cuid())
+  id              String   @id @default(cuid())
   learnerId       String
   moduleId        String
-  certificateId   String    @unique
-  earnedAt        DateTime  @default(now())
+  certificateId   String   @unique
+  earnedAt        DateTime @default(now())
   verificationUrl String?
-  learner         Learner   @relation(fields: [learnerId], references: [id], onDelete: Cascade)
-  module          Module    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  learner         Learner  @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  module          Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   payment         Payment?
 
   @@unique([learnerId, moduleId])
@@ -122,23 +123,23 @@ model Certificate {
 }
 
 model Payment {
-  id                  String    @id @default(cuid())
-  learnerId           String
-  certificateId       String    @unique
-  amount              Decimal   @db.Decimal(10, 2)
-  phoneNumber         String
-  merchantRequestId   String?
-  checkoutRequestId   String?   @unique
-  mpesaReceiptNumber  String?   @unique
-  transactionDate     DateTime?
-  status              String    @default("PENDING")
-  resultCode          String?
-  resultDesc          String?
-  metadata            Json?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  learner             Learner   @relation(fields: [learnerId], references: [id], onDelete: Cascade)
-  certificate         Certificate @relation(fields: [certificateId], references: [id], onDelete: Cascade)
+  id                 String      @id @default(cuid())
+  learnerId          String
+  certificateId      String      @unique
+  amount             Decimal     @db.Decimal(10, 2)
+  phoneNumber        String
+  merchantRequestId  String?
+  checkoutRequestId  String?     @unique
+  mpesaReceiptNumber String?     @unique
+  transactionDate    DateTime?
+  status             String      @default("PENDING")
+  resultCode         String?
+  resultDesc         String?
+  metadata           Json?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  learner            Learner     @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  certificate        Certificate @relation(fields: [certificateId], references: [id], onDelete: Cascade)
 
   @@index([learnerId])
   @@index([checkoutRequestId])
@@ -147,12 +148,25 @@ model Payment {
 }
 
 model Activity {
-  id          String @id @default(cuid())
+  id          String               @id @default(cuid())
   moduleId    String
   title       String
   description String
   content     Json
-  module      Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  module      Module               @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  completions ActivityCompletion[]
+}
+
+model ActivityCompletion {
+  id          String   @id @default(cuid())
+  learnerId   String
+  activityId  String
+  completedAt DateTime @default(now())
+  learner     Learner  @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  activity    Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@unique([learnerId, activityId])
+  @@index([learnerId])
 }
 
 model Certification {

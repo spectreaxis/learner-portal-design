@@ -1,5 +1,7 @@
 import { LearnerRepository, daysBetween } from '../../infrastructure/database/repositories/LearnerRepository';
 import { ProgressRepository } from '../../infrastructure/database/repositories/ProgressRepository';
+import { QuizRepository } from '../../infrastructure/database/repositories/QuizRepository';
+import { ActivityRepository } from '../../infrastructure/database/repositories/ActivityRepository';
 import {
   NotFoundError,
   ValidationError,
@@ -16,7 +18,9 @@ import {
 export class LearnerService {
   constructor(
     private learnerRepo: LearnerRepository,
-    private progressRepo: ProgressRepository
+    private progressRepo: ProgressRepository,
+    private quizRepo: QuizRepository,
+    private activityRepo: ActivityRepository
   ) {}
 
   async getProgress(learnerId: string) {
@@ -30,21 +34,21 @@ export class LearnerService {
 
     // A streak is broken once a full day passes with no activity
     const streakBroken = daysBetween(learner.lastActivityAt, new Date()) > 1;
-    return { ...safeLearner, currentStreak: streakBroken ? 0 : learner.currentStreak };
-  }
+    // quizSubmissions is capped at the latest 10, so passed quizzes and latest
+    // results are listed separately to restore finished quizzes and activities
+    const [passedQuizIds, latestQuizResults, completedActivityIds] = await Promise.all([
+      this.quizRepo.findPassedQuizIds(learnerId),
+      this.quizRepo.findLatestResults(learnerId),
+      this.activityRepo.findCompletedActivityIds(learnerId),
+    ]);
 
-  async updateLessonProgress(learnerId: string, lessonId: string, completed: boolean) {
-    // Update progress
-    const progress = await this.progressRepo.upsertProgress(
-      learnerId,
-      lessonId,
-      completed
-    );
-
-    // Update last activity timestamp
-    await this.learnerRepo.updateActivity(learnerId);
-
-    return progress;
+    return {
+      ...safeLearner,
+      currentStreak: streakBroken ? 0 : learner.currentStreak,
+      passedQuizIds,
+      latestQuizResults,
+      completedActivityIds,
+    };
   }
 
   async updateProfile(
@@ -85,6 +89,16 @@ export class LearnerService {
   }
 
   async trackActivity(learnerId: string) {
+    await this.learnerRepo.updateActivity(learnerId);
+  }
+
+  async setActivityCompleted(learnerId: string, activityId: string, completed: boolean) {
+    const activity = await this.activityRepo.findById(activityId);
+    if (!activity) {
+      throw new NotFoundError('Activity not found');
+    }
+
+    await this.activityRepo.setCompleted(learnerId, activityId, completed);
     await this.learnerRepo.updateActivity(learnerId);
   }
 }

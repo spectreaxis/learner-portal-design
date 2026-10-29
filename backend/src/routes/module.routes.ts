@@ -4,6 +4,7 @@ import { ModuleService } from '../application/services/ModuleService';
 import { ModuleRepository } from '../infrastructure/database/repositories/ModuleRepository';
 import { LessonRepository } from '../infrastructure/database/repositories/LessonRepository';
 import { AppError } from '../core/errors/AppError';
+import { getQuizAfterLessonOrder, SELF_CHECK_QUIZ_TYPE } from '../core/utils/quiz-placement';
 
 const router = express.Router();
 
@@ -42,18 +43,22 @@ router.get('/:moduleId', async (req, res) => {
     const transformed: any = {
       ...module,
       selfCheckQuizzes: (module.quizzes || [])
-        .filter((q: any) => q.type === 'self-check')
+        .filter((q: any) => q.type === SELF_CHECK_QUIZ_TYPE)
         .map((q: any) => ({
           id: q.id,
           title: q.title,
           questions: q.questions,
+          // Lesson order the quiz follows; it must be passed before moving past that lesson
+          afterLessonOrder: getQuizAfterLessonOrder(q.title),
         })),
       handsOnActivity: module.activities?.[0]
         ? {
+            ...(module.activities[0].content as Record<string, any>),
+            // After the spread: the seeded content has its own "id" that must not
+            // replace the database ID used to record completion
             id: module.activities[0].id,
             title: module.activities[0].title,
             description: module.activities[0].description,
-            ...(module.activities[0].content as Record<string, any>),
           }
         : undefined,
       certificationAssessment: module.certifications?.[0]

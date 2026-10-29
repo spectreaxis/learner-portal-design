@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, memo, useMemo, useEffect } from 'react';
+import { useState, memo, useMemo, useEffect, useRef } from 'react';
+import { useSession } from 'next-auth/react';
 import { CheckCircle2, XCircle, ChevronRight, RotateCcw, Sparkles, Loader2, Award } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { QuizQuestion } from '@/lib/types';
-import { saveQuizProgress, getQuizProgress } from '@/lib/storage';
+import { QuizQuestion, SavedQuizResult } from '@/lib/types';
+import { saveQuizProgress, getQuizProgress, clearQuizProgress } from '@/lib/storage';
 import { useSubmitQuiz } from '@/lib/hooks/useLearner';
 
 interface QuizSectionProps {
@@ -15,11 +16,25 @@ interface QuizSectionProps {
   moduleId?: string;
   /** Certification mode: no per-question feedback, 80% pass mark */
   isAssessment?: boolean;
+  /** Shown on the results screen once the quiz is passed, e.g. go to the next lesson */
+  continueAction?: { label: string; onClick: () => void };
+  /** Shown on the results screen when the quiz is failed, to revisit the lesson */
+  onReview?: () => void;
+  /** The learner's last submission, shown again instead of a blank quiz */
+  savedResult?: SavedQuizResult;
+  /** Certificate already earned for this assessment, linked from a saved passing result */
+  savedCertificate?: { certificateId: string };
   onComplete?: (score: number, maxScore: number, certificate?: any) => void;
 }
 
-export const QuizSection = memo(function QuizSection({ title, questions, quizId, moduleId, isAssessment = false, onComplete }: QuizSectionProps) {
+export const QuizSection = memo(function QuizSection({ title, questions, quizId, moduleId, isAssessment = false, continueAction, onReview, savedResult, savedCertificate, onComplete }: QuizSectionProps) {
   const submitQuizMutation = useSubmitQuiz();
+  const { data: session } = useSession();
+  const userId = (session?.user as any)?.id as string | undefined;
+  // Drafts are per learner and per quiz: titles repeat across modules and a browser may be shared
+  const draftKey = userId ? `${userId}:${quizId}` : null;
+  const initializedRef = useRef(false);
+  const [viewingSavedResult, setViewingSavedResult] = useState(false);
   const [earnedCertificate, setEarnedCertificate] = useState<any>(null);
   // Assessments have no answer key on the client, so their score comes from the server
   const [serverResult, setServerResult] = useState<{ score: number; maxScore: number; passed: boolean } | null>(null);
@@ -36,20 +51,35 @@ export const QuizSection = memo(function QuizSection({ title, questions, quizId,
     [questions, selectedAnswers]
   );
 
-  // Load from storage on mount
+  // Restore once the learner is known: resume an unfinished attempt if it is newer than
+  // the last submission, otherwise show the last submitted result
   useEffect(() => {
-    // Keyed by quizId: titles like "Certification Assessment" repeat across modules
-    const saved = getQuizProgress()[quizId];
-    if (saved) {
-      setSelectedAnswers(saved.selectedAnswers);
-      setSubmitted(saved.submitted);
-    }
-  }, [quizId]);
+    if (initializedRef.current || !draftKey) return;
+    initializedRef.current = true;
 
-  // Save on change
+    const draft = getQuizProgress()[draftKey];
+    const draftHasAnswers = !!draft && Object.keys(draft.selectedAnswers ?? {}).length > 0;
+    const savedAt = savedResult ? new Date(savedResult.submittedAt).getTime() : 0;
+
+    if (draftHasAnswers && (draft.updatedAt ?? 0) > savedAt) {
+      setSelectedAnswers(draft.selectedAnswers);
+      setSubmitted(draft.submitted ?? {});
+      setCurrentQuestion(Math.min(draft.currentQuestion ?? 0, questions.length - 1));
+    } else if (savedResult) {
+      setSelectedAnswers(savedResult.answers ?? {});
+      setSubmitted(Object.fromEntries(questions.map((q) => [q.id, true])));
+      setServerResult({ score: savedResult.score, maxScore: savedResult.maxScore, passed: savedResult.passed });
+      setShowResults(true);
+      setViewingSavedResult(true);
+    }
+  }, [draftKey, savedResult, questions]);
+
+  // Save the unfinished attempt so leaving the page doesn't lose it
   useEffect(() => {
-    saveQuizProgress(quizId, { selectedAnswers, submitted, score });
-  }, [selectedAnswers, submitted, score, quizId]);
+    if (!initializedRef.current || !draftKey || showResults) return;
+    if (Object.keys(selectedAnswers).length === 0) return;
+    saveQuizProgress(draftKey, { selectedAnswers, submitted, score, currentQuestion, updatedAt: Date.now() });
+  }, [selectedAnswers, submitted, score, currentQuestion, showResults, draftKey]);
 
   const question = questions[currentQuestion];
   // In an assessment answers are never revealed, so a question is never "answered" in the feedback sense
@@ -81,6 +111,9 @@ export const QuizSection = memo(function QuizSection({ title, questions, quizId,
           answers: selectedAnswers
         });
 
+        // Submitted: the server now holds this attempt, so the draft is no longer needed
+        if (draftKey) clearQuizProgress(draftKey);
+
         if (result.submission) {
           setServerResult({
             score: result.submission.score,
@@ -105,6 +138,8 @@ export const QuizSection = memo(function QuizSection({ title, questions, quizId,
   };
 
   const handleReset = () => {
+    if (draftKey) clearQuizProgress(draftKey);
+    setViewingSavedResult(false);
     setCurrentQuestion(0);
     setSelectedAnswers({});
     setShowResults(false);
@@ -114,10 +149,12 @@ export const QuizSection = memo(function QuizSection({ title, questions, quizId,
   };
 
   if (showResults) {
-    const finalScore = isAssessment ? serverResult?.score ?? 0 : score;
-    const maxScore = isAssessment ? serverResult?.maxScore ?? questions.length : questions.length;
+    const finalScore = serverResult?.score ?? (isAssessment ? 0 : score);
+    const maxScore = serverResult?.maxScore ?? questions.length;
+    const certificateToShow = earnedCertificate ?? (viewingSavedResult && serverResult?.passed ? savedCertificate : null);
     const percentage = Math.round((finalScore / maxScore) * 100);
-    const passed = isAssessment ? !!serverResult?.passed : percentage >= 70;
+    // The server's verdict decides progression; fall back to the local score if it is unavailable
+    const passed = serverResult ? serverResult.passed : percentage >= 70;
 
     return (
       <div className="p-6 rounded-2xl bg-card border border-border shadow-sm">
@@ -170,16 +207,53 @@ export const QuizSection = memo(function QuizSection({ title, questions, quizId,
               <p className="text-sm text-muted-foreground mt-1">
                 {percentage}% correct
               </p>
+              {viewingSavedResult && savedResult && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Your last attempt · {new Date(savedResult.submittedAt).toLocaleDateString('en-GB', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                  })}
+                </p>
+              )}
             </div>
 
-            {earnedCertificate && (
+            {/* Answer review: self-check quizzes only, the assessment's answer key stays on the server */}
+            {!isAssessment && (
+              <ul className="mb-6 space-y-2">
+                {questions.map((q, i) => {
+                  const answer = selectedAnswers[q.id];
+                  const correct = answer?.toLowerCase() === q.answer?.toLowerCase();
+                  const answerText = (label?: string) =>
+                    q.options?.find((o) => o.label === label)?.text ?? label ?? '—';
+                  return (
+                    <li key={q.id} className="flex items-start gap-3 p-3 rounded-xl bg-muted/30 border border-border">
+                      {correct ? (
+                        <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0 mt-0.5" />
+                      ) : (
+                        <XCircle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
+                      )}
+                      <div className="min-w-0 text-sm">
+                        <p className="font-medium text-foreground">{i + 1}. {q.question}</p>
+                        <p className="text-muted-foreground">Your answer: {answerText(answer)}</p>
+                        {!correct && (
+                          <p className="text-muted-foreground">Correct answer: {answerText(q.answer)}</p>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
+            {certificateToShow && (
               <div className="mb-4 p-4 rounded-xl bg-success/5 border border-success/20 text-center">
                 <p className="text-xs text-muted-foreground mb-1">Certificate ID</p>
                 <p className="font-mono text-sm font-semibold text-foreground mb-3">
-                  {earnedCertificate.certificateId}
+                  {certificateToShow.certificateId}
                 </p>
                 <Link
-                  href={`/certificate/${earnedCertificate.certificateId}`}
+                  href={`/certificate/${certificateToShow.certificateId}`}
                   className="inline-flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
                 >
                   <Award className="w-4 h-4" />
@@ -188,13 +262,44 @@ export const QuizSection = memo(function QuizSection({ title, questions, quizId,
               </div>
             )}
 
-            <button
-              onClick={handleReset}
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-muted text-foreground font-medium hover:bg-muted/80 transition-colors"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Try Again
-            </button>
+            <div className="space-y-3">
+              {passed && continueAction && (
+                <button
+                  onClick={continueAction.onClick}
+                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors shadow-sm"
+                >
+                  {continueAction.label}
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              )}
+              {!passed && !isAssessment && (
+                <p className="text-sm text-center text-muted-foreground">
+                  You need at least 70% to continue. Review the lesson, then try again.
+                </p>
+              )}
+              <div className="flex gap-3">
+                {!passed && onReview && (
+                  <button
+                    onClick={onReview}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-card border border-border text-foreground font-medium hover:bg-muted transition-colors"
+                  >
+                    Review Lesson
+                  </button>
+                )}
+                <button
+                  onClick={handleReset}
+                  className={cn(
+                    'flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition-colors',
+                    passed
+                      ? 'bg-muted text-foreground hover:bg-muted/80'
+                      : 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm'
+                  )}
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  {passed ? (isAssessment ? 'Retake Assessment' : 'Retake Quiz') : 'Try Again'}
+                </button>
+              </div>
+            </div>
           </>
         )}
       </div>

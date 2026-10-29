@@ -7,6 +7,7 @@ import { ModuleLockBanner } from '@/components/module-lock-banner';
 import { ChevronRight, Clock, Target, BookOpen, CheckCircle2, Lightbulb, Sparkles, Loader2 } from 'lucide-react';
 import type { Module } from '@/lib/types';
 import { useLearnerProgress } from '@/lib/hooks/useLearner';
+import { useModuleGate } from '@/lib/quiz-gate';
 import { useModuleAccess } from '@/lib/hooks/useModuleAccess';
 
 interface ModulePageClientProps {
@@ -17,6 +18,7 @@ interface ModulePageClientProps {
 export function ModulePageClient({ module, moduleId }: ModulePageClientProps) {
   const { data: learnerData, isLoading } = useLearnerProgress();
   const moduleAccess = useModuleAccess(module.number);
+  const gate = useModuleGate(module);
 
   // Calculate real progress
   const progressInModule = learnerData?.progress?.filter(
@@ -156,6 +158,7 @@ export function ModulePageClient({ module, moduleId }: ModulePageClientProps) {
                 index={index}
                 isCompleted={completedLessonIds.has(lesson.id)}
                 isCurrent={index === currentLessonIndex}
+                isLocked={!!gate.blockingQuizForLesson(index)}
                 moduleId={moduleId}
               />
             ))}

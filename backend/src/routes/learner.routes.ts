@@ -12,6 +12,7 @@ import { QuizRepository } from '../infrastructure/database/repositories/QuizRepo
 import { CertificateRepository } from '../infrastructure/database/repositories/CertificateRepository';
 import { LessonRepository } from '../infrastructure/database/repositories/LessonRepository';
 import { PaymentRepository } from '../infrastructure/database/repositories/PaymentRepository';
+import { ActivityRepository } from '../infrastructure/database/repositories/ActivityRepository';
 import { AppError } from '../core/errors/AppError';
 
 const router = express.Router();
@@ -26,11 +27,12 @@ const lessonRepo = new LessonRepository(dataProvider);
 const quizRepo = new QuizRepository(dataProvider);
 const certificateRepo = new CertificateRepository(dataProvider);
 const paymentRepo = new PaymentRepository(dataProvider);
+const activityRepo = new ActivityRepository(dataProvider);
 
 // Initialize services
-const learnerService = new LearnerService(learnerRepo, progressRepo);
-const progressService = new ProgressService(progressRepo, learnerRepo, lessonRepo);
-const quizService = new QuizService(quizRepo, certificateRepo, learnerRepo);
+const learnerService = new LearnerService(learnerRepo, progressRepo, quizRepo, activityRepo);
+const progressService = new ProgressService(progressRepo, learnerRepo, lessonRepo, quizRepo);
+const quizService = new QuizService(quizRepo, certificateRepo, learnerRepo, lessonRepo, progressRepo);
 const certificateService = new CertificateService(certificateRepo, paymentRepo);
 const authService = new AuthService(authProvider);
 
@@ -61,7 +63,8 @@ router.post('/progress', async (req: AuthRequest, res) => {
   try {
     const { lessonId, completed } = req.body;
 
-    const progress = await learnerService.updateLessonProgress(
+    // ProgressService validates the lesson and enforces the self-check quiz gate
+    const progress = await progressService.updateProgress(
       req.userId!,
       lessonId,
       completed
@@ -158,7 +161,7 @@ router.post('/activities', async (req: AuthRequest, res) => {
   try {
     const { activityId, completed } = req.body;
 
-    await learnerService.trackActivity(req.userId!);
+    await learnerService.setActivityCompleted(req.userId!, activityId, completed !== false);
 
     res.json({ success: true, activityId, completed });
   } catch (error: any) {

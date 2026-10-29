@@ -1,7 +1,10 @@
 import { QuizRepository } from '../../infrastructure/database/repositories/QuizRepository';
 import { CertificateRepository } from '../../infrastructure/database/repositories/CertificateRepository';
 import { LearnerRepository } from '../../infrastructure/database/repositories/LearnerRepository';
+import { LessonRepository } from '../../infrastructure/database/repositories/LessonRepository';
+import { ProgressRepository } from '../../infrastructure/database/repositories/ProgressRepository';
 import { NotFoundError, ValidationError } from '../../core/errors/AppError';
+import { SELF_CHECK_PASSING_PERCENTAGE, SELF_CHECK_QUIZ_TYPE } from '../../core/utils/quiz-placement';
 
 /**
  * Quiz Service
@@ -14,7 +17,9 @@ export class QuizService {
   constructor(
     private quizRepo: QuizRepository,
     private certificateRepo: CertificateRepository,
-    private learnerRepo: LearnerRepository
+    private learnerRepo: LearnerRepository,
+    private lessonRepo: LessonRepository,
+    private progressRepo: ProgressRepository
   ) {}
 
   async submitQuiz(
@@ -47,8 +52,7 @@ export class QuizService {
     });
 
     const percentage = Math.round((correctAnswers / questions.length) * 100);
-    const requiredScore = 70;
-    const passed = percentage >= requiredScore;
+    const passed = percentage >= SELF_CHECK_PASSING_PERCENTAGE;
 
     // Create submission
     const submission = await this.quizRepo.createSubmission({
@@ -86,6 +90,8 @@ export class QuizService {
     if (!certification) {
       throw new NotFoundError('Certification not found');
     }
+
+    await this.assertReadyForCertification(learnerId, certification.moduleId);
 
     // Calculate score
     const questions = (certification.content as any).questions;
@@ -142,5 +148,26 @@ export class QuizService {
     await this.learnerRepo.updateActivity(learnerId);
 
     return { submission, certificate: certificateRecord };
+  }
+
+  /** The assessment unlocks only after every lesson is completed and every self-check quiz passed */
+  private async assertReadyForCertification(learnerId: string, moduleId: string) {
+    const [lessons, progress, quizzes, passedQuizIds] = await Promise.all([
+      this.lessonRepo.findByModuleId(moduleId),
+      this.progressRepo.findByLearner(learnerId),
+      this.quizRepo.findByModuleId(moduleId),
+      this.quizRepo.findPassedQuizIds(learnerId),
+    ]);
+
+    const completedLessonIds = new Set(progress.filter((p) => p.completed).map((p) => p.lessonId));
+    if (lessons.some((lesson) => !completedLessonIds.has(lesson.id))) {
+      throw new ValidationError('Complete all lessons before taking the certification assessment');
+    }
+
+    const passed = new Set(passedQuizIds);
+    const unpassedQuiz = quizzes.find((q) => q.type === SELF_CHECK_QUIZ_TYPE && !passed.has(q.id));
+    if (unpassedQuiz) {
+      throw new ValidationError(`Pass "${unpassedQuiz.title}" before taking the certification assessment`);
+    }
   }
 }

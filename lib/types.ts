@@ -16,6 +16,15 @@ export interface QuizQuestion {
   type: 'multiple-choice' | 'true-false' | 'short-answer';
 }
 
+/** The learner's most recent submission for a quiz or certification */
+export interface SavedQuizResult {
+  score: number;
+  maxScore: number;
+  passed: boolean;
+  answers: Record<string, string>;
+  submittedAt: string;
+}
+
 export interface Lesson {
   id: string;
   title: string;
@@ -34,7 +43,7 @@ export interface Module {
   description: string;
   learningObjectives: string[];
   lessons: Lesson[];
-  selfCheckQuizzes: { id: string; title: string; questions: QuizQuestion[] }[];
+  selfCheckQuizzes: { id: string; title: string; questions: QuizQuestion[]; afterLessonOrder?: number | null }[];
   handsOnActivity?: {
     id: string;
     title: string;

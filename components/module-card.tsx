@@ -128,10 +128,29 @@ interface LessonListItemProps {
   index: number;
   isCompleted: boolean;
   isCurrent: boolean;
+  /** Locked until an earlier self-check quiz is passed */
+  isLocked?: boolean;
   moduleId: string;
 }
 
-export function LessonListItem({ lesson, index, isCompleted, isCurrent, moduleId }: LessonListItemProps) {
+export function LessonListItem({ lesson, index, isCompleted, isCurrent, isLocked = false, moduleId }: LessonListItemProps) {
+  if (isLocked && !isCurrent) {
+    return (
+      <div
+        className="flex items-center gap-3 px-4 py-3.5 rounded-xl opacity-60 cursor-not-allowed"
+        title="Pass the previous quiz to unlock"
+        aria-disabled="true"
+      >
+        <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+          <Lock className="w-3.5 h-3.5 text-muted-foreground" />
+        </div>
+        <p className="flex-1 min-w-0 text-sm font-medium truncate text-muted-foreground">
+          {index + 1}. {lesson.title}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <Link
       href={`/learn/${moduleId}/${lesson.id}`}

@@ -9,6 +9,10 @@ interface QuizProgress {
     submitted: Record<string, boolean>;
     score?: number;
     completedAt?: string;
+    /** Question the learner was on, to resume an unfinished attempt */
+    currentQuestion?: number;
+    /** When the draft was last changed (ms), compared with the last submission */
+    updatedAt?: number;
   };
 }
 
