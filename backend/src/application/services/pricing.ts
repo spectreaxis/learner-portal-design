@@ -20,6 +20,13 @@ export const certificatePrice: Price = parsePrice(
   process.env.CERTIFICATE_PRICE_CURRENCY ?? 'USD'
 );
 
+// Optional original price, shown struck through beside the price as a discount.
+// Same currency as the price, and must be higher; it is never charged.
+export const certificateListPrice: Price | null = parseListPrice(
+  process.env.CERTIFICATE_LIST_PRICE,
+  certificatePrice
+);
+
 export async function quoteCharge(price: Price): Promise<ChargeQuote> {
   const fxRate = price.currency === CHARGE_CURRENCY ? null : await getExchangeRate(price.currency, CHARGE_CURRENCY);
   // M-Pesa only takes whole shillings, so round up rather than undercharge
@@ -33,4 +40,15 @@ function parsePrice(amount: string, currency: string): Price {
     throw new Error('CERTIFICATE_PRICE must be a positive number and CERTIFICATE_PRICE_CURRENCY an ISO code like USD');
   }
   return { amount: value, currency };
+}
+
+export function parseListPrice(amount: string | undefined, price: Price): Price | null {
+  if (!amount?.trim()) return null;
+  const value = Number(amount);
+  if (!Number.isFinite(value) || value <= price.amount) {
+    throw new Error(
+      `CERTIFICATE_LIST_PRICE must be a number above CERTIFICATE_PRICE (${price.amount} ${price.currency})`
+    );
+  }
+  return { amount: value, currency: price.currency };
 }

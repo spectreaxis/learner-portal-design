@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { quoteCharge } from './pricing';
+import { parseListPrice, quoteCharge } from './pricing';
 
 test('KES prices are charged as-is in whole shillings', async () => {
   assert.deepEqual(await quoteCharge({ amount: 10, currency: 'KES' }), {
@@ -12,10 +12,8 @@ test('KES prices are charged as-is in whole shillings', async () => {
 
 test("USD prices convert at the day's rate and round up to a whole shilling", async () => {
   const original = global.fetch;
-  global.fetch = (async () =>
-    new Response(
-      JSON.stringify({ result: 'success', rates: { KES: 129.23 }, time_next_update_unix: Date.now() / 1000 + 3600 })
-    )) as typeof fetch;
+  const today = new Date().toISOString().slice(0, 10);
+  global.fetch = (async () => new Response(JSON.stringify({ date: today, usd: { kes: 129.23 } }))) as typeof fetch;
 
   try {
     assert.deepEqual(await quoteCharge({ amount: 5, currency: 'USD' }), {
@@ -26,4 +24,14 @@ test("USD prices convert at the day's rate and round up to a whole shilling", as
   } finally {
     global.fetch = original;
   }
+});
+
+test('the list price is optional, in the price currency, and must be above the price', () => {
+  const price = { amount: 5, currency: 'USD' };
+  assert.equal(parseListPrice(undefined, price), null);
+  assert.equal(parseListPrice('', price), null);
+  assert.deepEqual(parseListPrice('23.00', price), { amount: 23, currency: 'USD' });
+  assert.throws(() => parseListPrice('5', price), /CERTIFICATE_LIST_PRICE/);
+  assert.throws(() => parseListPrice('4', price), /CERTIFICATE_LIST_PRICE/);
+  assert.throws(() => parseListPrice('abc', price), /CERTIFICATE_LIST_PRICE/);
 });

@@ -4,7 +4,7 @@ import { Payment, PaymentRepository } from '../../infrastructure/database/reposi
 import { CertificateRepository } from '../../infrastructure/database/repositories/CertificateRepository';
 import { LearnerRepository } from '../../infrastructure/database/repositories/LearnerRepository';
 import { ConflictError, NotFoundError } from '../../core/errors/AppError';
-import { CHARGE_CURRENCY, certificatePrice, quoteCharge } from './pricing';
+import { CHARGE_CURRENCY, certificateListPrice, certificatePrice, quoteCharge } from './pricing';
 
 // An unfinished checkout is resumed rather than replaced within this window,
 // so retrying never leaves two live payments for one certificate
@@ -34,6 +34,7 @@ export class PaymentService {
     return {
       isPaid: await this.reconcileCertificate(certificateId),
       price: certificatePrice,
+      listPrice: certificateListPrice,
       chargeCurrency: CHARGE_CURRENCY,
     };
   }

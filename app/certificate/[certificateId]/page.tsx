@@ -13,6 +13,7 @@ import { PDFDownloadLink } from '@react-pdf/renderer';
 import { CertificatePDF } from '@/components/CertificatePDF';
 import { PaymentModal } from '@/components/PaymentModal';
 import { ShareCertificateButton } from '@/components/share-certificate-button';
+import { CertificatePrice } from '@/components/certificate-price';
 import { LoadError } from '@/components/load-error';
 import { failedLoad } from '@/lib/failed-load';
 
@@ -178,9 +179,14 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
             <div className="absolute inset-0 z-50 flex items-start justify-center pt-10 bg-black/60 backdrop-blur-md">
               <div className="sticky top-10 text-center p-8 bg-white/90 rounded-2xl shadow-2xl max-w-md mx-4">
                 <Lock className="w-16 h-16 text-primary mx-auto mb-4" />
-                <h3 className="text-2xl font-bold text-foreground mb-2">Certificate Locked</h3>
+                <h3 className="text-2xl font-bold text-foreground mb-4">Certificate Locked</h3>
+                {paymentData && (
+                  <div className="mb-4">
+                    <CertificatePrice price={paymentData.price} listPrice={paymentData.listPrice} />
+                  </div>
+                )}
                 <p className="text-muted-foreground mb-6">
-                  Complete payment of <strong>{priceLabel}</strong> to view and download your certificate
+                  Pay once to view and download your certificate
                 </p>
                 <button
                   onClick={checkout.pay}
@@ -190,14 +196,6 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
                   {isOpening && <Loader2 className="w-4 h-4 animate-spin" />}
                   {isOpening ? 'Opening secure checkout...' : 'Pay Now to Unlock'}
                 </button>
-                {paymentData && paymentData.price.currency !== paymentData.chargeCurrency && (
-                  <p className="mt-3 text-xs text-muted-foreground">
-                    Charged in {paymentData.chargeCurrency} at today&apos;s rate ·{' '}
-                    <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener noreferrer" className="underline">
-                      Rates By Exchange Rate API
-                    </a>
-                  </p>
-                )}
               </div>
             </div>
           )}

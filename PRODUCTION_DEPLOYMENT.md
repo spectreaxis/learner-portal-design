@@ -118,6 +118,7 @@ PAYMENT_PROVIDER=paystack
 PAYSTACK_SECRET_KEY=${SK_LIVE_KEY}            # sk_live_... ; the server logs a warning if a test key is used
 CERTIFICATE_PRICE=5.00
 CERTIFICATE_PRICE_CURRENCY=USD               # learners pay the KES equivalent at the day's rate
+CERTIFICATE_LIST_PRICE=23.00                 # optional: shown struck through with the saving; never charged
 ```
 
 **Important Notes:**
@@ -135,7 +136,7 @@ CERTIFICATE_PRICE_CURRENCY=USD               # learners pay the KES equivalent a
   `https://api.cogniwiseai.com/api/payments/webhooks/paystack` (the public `api.` URL, never the
   internal `cogniwise-api` alias). The Live Callback URL can stay empty: checkout runs in a popup
   on the portal, so Paystack never redirects learners
-- Payments need outbound HTTPS from the backend to `api.paystack.co` and `open.er-api.com`
+- Payments need outbound HTTPS from the backend to `api.paystack.co` and, for exchange rates, `cdn.jsdelivr.net` (falling back to `latest.currency-api.pages.dev`)
   (daily USD→KES rate)
 - `DATABASE_URL` uses container name (found via `docker ps` on server)
 - All secrets stored in Coolify dashboard, NOT committed to git

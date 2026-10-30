@@ -10,6 +10,8 @@ export interface Price {
 interface CertificatePayment {
   isPaid: boolean;
   price: Price;
+  // The original price, shown struck through, when the price is discounted
+  listPrice: Price | null;
   chargeCurrency: string;
 }
 
