@@ -3,9 +3,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Bell, Search, User, Menu, Settings, LogOut, ChevronDown } from 'lucide-react';
+import { User, Menu, Settings, LogOut, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMobileSidebar } from './auth-layout';
+import { LessonSearchButton } from './lesson-search';
 
 interface HeaderProps {
   title?: string;
@@ -65,23 +66,7 @@ export function Header({ title, subtitle, className }: HeaderProps) {
 
       <div className="flex items-center gap-2">
         {/* Search */}
-        <div className="hidden md:flex items-center gap-2 px-4 py-2.5 rounded-xl bg-muted/50 border border-border hover:border-border/80 transition-colors">
-          <Search className="w-4 h-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search lessons..."
-            className="bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none w-44"
-          />
-          <kbd className="hidden lg:inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono text-muted-foreground bg-background rounded border border-border">
-            <span className="text-xs">⌘</span>K
-          </kbd>
-        </div>
-
-        {/* Notifications */}
-        <button className="relative p-2.5 rounded-xl hover:bg-muted transition-colors">
-          <Bell className="w-5 h-5 text-muted-foreground" />
-          <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full ring-2 ring-background" />
-        </button>
+        <LessonSearchButton />
 
         {/* User Profile Dropdown */}
         <div className="relative" ref={menuRef}>

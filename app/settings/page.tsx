@@ -2,13 +2,18 @@
 
 import { useState } from 'react';
 import { Header } from '@/components/header';
+import { LoadError } from '@/components/load-error';
+import { failedLoad } from '@/lib/failed-load';
 import { useSession, signOut } from 'next-auth/react';
 import { useLearnerProgress, useUpdateProfile, useChangePassword } from '@/lib/hooks/useLearner';
 import { User, Bell, Palette, Shield, LogOut, ChevronRight, Sun, Loader2, X, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export default function SettingsPage() {
   const { data: session, update } = useSession();
-  const { data: learnerData, isLoading } = useLearnerProgress();
+  const learnerQuery = useLearnerProgress();
+  const { data: learnerData, isLoading } = learnerQuery;
+  // Account actions work without learning data, so only the parts that show it wait on it
+  const loadError = failedLoad(learnerQuery);
   const updateProfile = useUpdateProfile();
   const changePassword = useChangePassword();
 
@@ -110,7 +115,7 @@ export default function SettingsPage() {
   const currentStreak = learnerData?.currentStreak || 0;
   const totalCertificates = learnerData?.certificates?.length || 0;
   const passedQuizzes = learnerData?.quizSubmissions?.filter((q: any) => q.passed).length || 0;
-  const enrolledDate = learnerData?.enrolledAt ? new Date(learnerData.enrolledAt) : new Date();
+  const enrolledDate = learnerData?.enrolledAt ? new Date(learnerData.enrolledAt) : null;
 
   const settingsSections = [
     {
@@ -141,7 +146,9 @@ export default function SettingsPage() {
             <div className="flex-1 min-w-0">
               <h2 className="text-lg font-semibold text-foreground">{session?.user?.name || 'User'}</h2>
               <p className="text-sm text-muted-foreground">{session?.user?.email || ''}</p>
-              <p className="text-xs text-muted-foreground mt-1">Member since {enrolledDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</p>
+              {enrolledDate && (
+                <p className="text-xs text-muted-foreground mt-1">Member since {enrolledDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</p>
+              )}
             </div>
             <button onClick={openProfileModal} className="px-4 py-2.5 rounded-xl bg-muted text-foreground text-sm font-medium hover:bg-muted/80 transition-colors">Edit Profile</button>
           </div>
@@ -179,6 +186,11 @@ export default function SettingsPage() {
 
         <div className="mb-8">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-1">Learning Statistics</h3>
+          {loadError ? (
+            <div className="rounded-2xl bg-card border border-border shadow-sm">
+              <LoadError {...loadError} />
+            </div>
+          ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { label: 'Lessons Done', value: completedLessons },
@@ -192,6 +204,7 @@ export default function SettingsPage() {
               </div>
             ))}
           </div>
+          )}
         </div>
 
         <div>

@@ -26,6 +26,7 @@ import type { Module, Lesson } from '@/lib/types';
 import { useUpdateProgress, useCompleteActivity } from '@/lib/hooks/useLearner';
 import { useModuleGate } from '@/lib/quiz-gate';
 import { useMobileSidebar } from '@/components/auth-layout';
+import { LoadError } from '@/components/load-error';
 
 // Code splitting: Lazy load QuizSection (heavy component with form logic)
 const QuizSection = dynamic(
@@ -103,6 +104,9 @@ export function LessonPageClient({
     ? module.lessons.find((_, i) => gate.quizForLesson(i)?.id === blockingQuiz.id)
     : undefined;
 
+  // Lesson lists show completion and locks, which mean nothing until progress has loaded
+  const progressKnown = !gate.isLoading && !gate.loadError;
+
   // Check if this is the last lesson (show activity/certification)
   const isLastLesson = lessonIndex === module.lessons.length - 1;
 
@@ -135,10 +139,12 @@ export function LessonPageClient({
     setActiveTab('certification');
   };
 
-  const moduleProgress = Math.round(((lessonIndex + 1) / module.lessons.length) * 100);
+  // Lessons completed, not position: the "Lesson X of Y" label already shows position
+  const moduleProgress = Math.round((completedLessonCount / module.lessons.length) * 100);
 
-  // A locked lesson shows only the lock screen, so it gets no extra tabs
-  const tabs = blockingQuiz ? [] : [
+  // A locked lesson shows only the lock screen, and one whose progress didn't
+  // load shows only the error, so neither gets tabs
+  const tabs = blockingQuiz || gate.loadError ? [] : [
     { id: 'lesson' as const, label: 'Lesson', icon: BookOpen },
     ...(relevantQuiz ? [{ id: 'quiz' as const, label: 'Quiz', icon: HelpCircle }] : []),
     ...(isLastLesson && module.handsOnActivity ? [{ id: 'activity' as const, label: 'Activity', icon: Wrench }] : []),
@@ -186,7 +192,7 @@ export function LessonPageClient({
               </button>
             </div>
             <div className="p-2">
-              {module.lessons.map((l, i) => (
+              {progressKnown && module.lessons.map((l, i) => (
                 <LessonListItem
                   key={l.id}
                   lesson={l}
@@ -255,7 +261,9 @@ export function LessonPageClient({
             <div className="flex-1 px-6 py-6 lg:px-8 lg:py-8">
               <div className={CONTENT_COLUMN}>
               {/* Wait for saved progress so finished quizzes open on their results */}
-              {gate.isLoading ? (
+              {gate.loadError ? (
+                <LoadError {...gate.loadError} />
+              ) : gate.isLoading ? (
                 <div className="flex items-center justify-center py-24">
                   <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                 </div>
@@ -558,7 +566,7 @@ export function LessonPageClient({
                   {lesson.title}
                 </span>
 
-                {blockingQuiz ? (
+                {blockingQuiz || gate.loadError ? (
                   <div />
                 ) : !quizPassed ? (
                   // The lesson's quiz must be passed before moving on
@@ -645,7 +653,7 @@ export function LessonPageClient({
               <p className="text-sm text-muted-foreground line-clamp-2">{module.title}</p>
             </div>
             <div className="p-2">
-              {module.lessons.map((l, i) => (
+              {progressKnown && module.lessons.map((l, i) => (
                 <LessonListItem
                   key={l.id}
                   lesson={l}

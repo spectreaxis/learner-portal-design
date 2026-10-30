@@ -1,6 +1,7 @@
 import type { Module, SavedQuizResult } from '@/lib/types';
 import { useSession } from 'next-auth/react';
 import { useLearnerProgress } from '@/lib/hooks/useLearner';
+import { failedLoad } from '@/lib/failed-load';
 
 type SelfCheckQuiz = Module['selfCheckQuizzes'][number];
 
@@ -20,9 +21,11 @@ export function getQuizAfterLessonOrder(quiz: SelfCheckQuiz): number | null {
  */
 export function useModuleGate(module: Module) {
   const { status } = useSession();
-  const { data: learnerData } = useLearnerProgress();
+  const learnerQuery = useLearnerProgress();
+  const { data: learnerData } = learnerQuery;
+  const loadError = failedLoad(learnerQuery);
   // The progress query only starts once the session is known, so count that wait as loading
-  const isLoading = status === 'loading' || (status === 'authenticated' && !learnerData);
+  const isLoading = status === 'loading' || (status === 'authenticated' && !learnerData && !loadError);
 
   const completedLessonIds = new Set<string>(
     learnerData?.progress?.filter((p: any) => p.completed).map((p: any) => p.lessonId) ?? []
@@ -54,6 +57,7 @@ export function useModuleGate(module: Module) {
 
   return {
     isLoading,
+    loadError,
     latestQuizResults,
     completedActivityIds,
     moduleCertificate,

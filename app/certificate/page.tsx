@@ -1,6 +1,8 @@
 'use client';
 
 import { Header } from '@/components/header';
+import { LoadError } from '@/components/load-error';
+import { failedLoad } from '@/lib/failed-load';
 import { useLearnerProgress } from '@/lib/hooks/useLearner';
 import { useModules } from '@/lib/hooks/useModules';
 import { Award, Download, Share2, ExternalLink, Lock, CheckCircle2, GraduationCap, Shield, Loader2 } from 'lucide-react';
@@ -18,13 +20,28 @@ function findFirstIncompleteLesson(module: { lessons?: { id: string }[] }, learn
 
 export default function CertificatePage() {
   const { data: session } = useSession();
-  const { data: modules = [], isLoading: modulesLoading } = useModules();
-  const { data: learnerData, isLoading: learnerLoading } = useLearnerProgress();
+  const modulesQuery = useModules();
+  const learnerQuery = useLearnerProgress();
+  const { data: modules = [], isLoading: modulesLoading } = modulesQuery;
+  const { data: learnerData, isLoading: learnerLoading } = learnerQuery;
 
   const isLoading = modulesLoading || learnerLoading;
+  const loadError = failedLoad(modulesQuery, learnerQuery);
 
   // Get earned certificates
   const certificates = learnerData?.certificates || [];
+
+  if (loadError) {
+    return (
+      <>
+        <Header
+          title="Your Certificates"
+          subtitle="Earned certifications"
+        />
+        <LoadError {...loadError} />
+      </>
+    );
+  }
 
   if (isLoading) {
     return (

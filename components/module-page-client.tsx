@@ -9,6 +9,9 @@ import type { Module } from '@/lib/types';
 import { useLearnerProgress } from '@/lib/hooks/useLearner';
 import { useModuleGate } from '@/lib/quiz-gate';
 import { useModuleAccess } from '@/lib/hooks/useModuleAccess';
+import { LoadError } from '@/components/load-error';
+import { useModules } from '@/lib/hooks/useModules';
+import { failedLoad } from '@/lib/failed-load';
 
 interface ModulePageClientProps {
   module: Module;
@@ -19,6 +22,9 @@ export function ModulePageClient({ module, moduleId }: ModulePageClientProps) {
   const { data: learnerData, isLoading } = useLearnerProgress();
   const moduleAccess = useModuleAccess(module.number);
   const gate = useModuleGate(module);
+  const modulesQuery = useModules();
+  // Module access is worked out from the full module list as well as progress
+  const loadError = gate.loadError ?? failedLoad(modulesQuery);
 
   // Calculate real progress
   const progressInModule = learnerData?.progress?.filter(
@@ -37,6 +43,10 @@ export function ModulePageClient({ module, moduleId }: ModulePageClientProps) {
   const hasCertificate = learnerData?.certificates?.some(
     (cert: any) => cert.moduleId === moduleId
   );
+
+  if (loadError) {
+    return <LoadError {...loadError} />;
+  }
 
   if (isLoading) {
     return (

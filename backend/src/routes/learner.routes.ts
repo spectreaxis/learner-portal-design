@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
+import { learnerRateLimiter, publicRateLimiter } from '../middleware/rate-limit.middleware';
 import { ProviderFactory } from '../config/providers.config';
 import { LearnerService } from '../application/services/LearnerService';
 import { ProgressService } from '../application/services/ProgressService';
@@ -36,8 +37,8 @@ const quizService = new QuizService(quizRepo, certificateRepo, learnerRepo, less
 const certificateService = new CertificateService(certificateRepo, paymentRepo);
 const authService = new AuthService(authProvider);
 
-// All routes require authentication
-router.use(authenticate);
+// Each learner has their own request budget, and all routes require authentication
+router.use(learnerRateLimiter, authenticate);
 
 // Get learner progress
 router.get('/progress', async (req: AuthRequest, res) => {
@@ -178,10 +179,10 @@ router.post('/activities', async (req: AuthRequest, res) => {
 // Public endpoint - certificate verification (no auth required)
 const certificateRouter = express.Router();
 
-certificateRouter.get('/certificates/:certificateId', async (req, res) => {
+certificateRouter.get('/certificates/:certificateId', publicRateLimiter, async (req, res) => {
   try {
     const certificate = await certificateService.verifyCertificate(
-      req.params.certificateId
+      req.params.certificateId as string
     );
 
     res.json(certificate);

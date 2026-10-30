@@ -110,6 +110,15 @@ export class JWTAuthProvider implements IAuthProvider {
     }
   }
 
+  getTokenSubject(token: string): string | null {
+    try {
+      const decoded = jwt.verify(token, this.jwtSecret) as { userId?: string };
+      return decoded.userId ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   async changePassword(
     userId: string,
     currentPassword: string,

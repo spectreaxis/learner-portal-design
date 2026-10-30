@@ -45,6 +45,14 @@ export interface IAuthProvider {
   verifyToken(token: string): Promise<string>;
 
   /**
+   * The user a token was issued to, checked by its signature alone (no
+   * database lookup), so it is cheap enough to run before authentication
+   * @param token - Authentication token
+   * @returns userId, or null if the token is invalid or expired
+   */
+  getTokenSubject(token: string): string | null;
+
+  /**
    * Refresh authentication token (optional for JWT, required for some providers)
    * @param refreshToken - Refresh token
    * @returns New access token

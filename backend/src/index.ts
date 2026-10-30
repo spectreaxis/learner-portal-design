@@ -11,7 +11,7 @@ import moduleRoutes from './routes/module.routes';
 import learnerRoutes, { certificateRouter } from './routes/learner.routes';
 import paymentRoutes, { webhookRouter } from './routes/payment.routes';
 import { errorHandler } from './middleware/error.middleware';
-import { rateLimiter } from './middleware/rate-limit.middleware';
+import { publicRateLimiter } from './middleware/rate-limit.middleware';
 import { prismaClient, disconnectPrisma } from './infrastructure/prisma/client';
 import { ProviderFactory } from './config/providers.config';
 
@@ -43,12 +43,10 @@ app.use('/api/payments/webhooks', webhookRouter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Rate limiting
-app.use('/api', rateLimiter);
-
-// Routes
+// Routes (each is rate limited for its own traffic: sign-in and sign-up per
+// client IP, signed-in learners per account, public content per client IP)
 app.use('/api/auth', authRoutes);
-app.use('/api/modules', moduleRoutes);
+app.use('/api/modules', publicRateLimiter, moduleRoutes);
 // Public certificate verification must be mounted before learnerRoutes,
 // whose authenticate middleware would otherwise reject it
 app.use('/api/learner', certificateRouter);

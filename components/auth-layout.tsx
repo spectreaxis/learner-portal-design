@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Sidebar } from './sidebar';
+import { LessonSearchProvider } from './lesson-search';
 
 // Lets the header's menu button open the sidebar on small screens
 const MobileSidebarContext = createContext<{ open: boolean; setOpen: (open: boolean) => void }>({
@@ -35,7 +36,8 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
         {showSidebar && <Sidebar />}
 
         <main className={showSidebar ? 'flex-1 min-w-0 md:ml-[260px]' : 'flex-1 min-w-0'}>
-          {children}
+          {/* Always rendered so pages don't remount when the session finishes loading */}
+          <LessonSearchProvider enabled={showSidebar}>{children}</LessonSearchProvider>
         </main>
       </div>
     </MobileSidebarContext.Provider>

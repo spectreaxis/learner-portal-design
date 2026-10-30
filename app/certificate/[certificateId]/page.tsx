@@ -4,7 +4,7 @@ import React from 'react';
 import { useLearnerProgress } from '@/lib/hooks/useLearner';
 import { useModules } from '@/lib/hooks/useModules';
 import { useCertificatePayment, useCertificateCheckout, formatPrice } from '@/lib/hooks/usePayment';
-import { Award, Download, Share2, GraduationCap, Shield, Loader2, ArrowLeft, Lock } from 'lucide-react';
+import { Award, Download, GraduationCap, Shield, Loader2, ArrowLeft, Lock } from 'lucide-react';
 import { BrandMark } from '@/components/brand-mark';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
@@ -12,12 +12,17 @@ import { notFound } from 'next/navigation';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { CertificatePDF } from '@/components/CertificatePDF';
 import { PaymentModal } from '@/components/PaymentModal';
+import { ShareCertificateButton } from '@/components/share-certificate-button';
+import { LoadError } from '@/components/load-error';
+import { failedLoad } from '@/lib/failed-load';
 
 export default function CertificateDetailPage({ params }: { params: Promise<{ certificateId: string }> }) {
   const { certificateId } = React.use(params);
   const { data: session } = useSession();
-  const { data: modules = [], isLoading: modulesLoading } = useModules();
-  const { data: learnerData, isLoading: learnerLoading } = useLearnerProgress();
+  const modulesQuery = useModules();
+  const learnerQuery = useLearnerProgress();
+  const { data: modules = [], isLoading: modulesLoading } = modulesQuery;
+  const { data: learnerData, isLoading: learnerLoading } = learnerQuery;
 
   // Find the certificate early (before any conditional returns)
   const certificate = learnerData?.certificates?.find(
@@ -28,13 +33,32 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
   const module = certificate ? modules.find((m) => m.id === certificate.moduleId) : null;
 
   // Check payment status (ALL HOOKS must be called before any conditional returns)
-  const { data: paymentData, isLoading: paymentLoading } = useCertificatePayment(certificate?.id || '');
+  const paymentQuery = useCertificatePayment(certificate?.id || '');
+  const { data: paymentData, isLoading: paymentLoading } = paymentQuery;
   const checkout = useCertificateCheckout(certificate?.id || '');
   const isPaid = paymentData?.isPaid || false;
   const priceLabel = paymentData ? formatPrice(paymentData.price) : '';
   const isOpening = checkout.phase === 'opening';
 
   const isLoading = modulesLoading || learnerLoading || paymentLoading;
+  // Without the learner's data a missing certificate can't be told from one
+  // that didn't load, and without its payment status a paid one would show as locked
+  const loadError = failedLoad(modulesQuery, learnerQuery, paymentQuery);
+
+  if (loadError) {
+    return (
+      <div className="p-6 max-w-5xl mx-auto">
+        <Link
+          href="/certificate"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Certificates
+        </Link>
+        <LoadError {...loadError} />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -126,10 +150,10 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
                     )
                   }
                 </PDFDownloadLink>
-                <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-card border border-border text-foreground text-sm font-medium hover:bg-muted transition-colors shadow-sm">
-                  <Share2 className="w-4 h-4" />
-                  Share
-                </button>
+                <ShareCertificateButton
+                  verifyUrl={verifyUrl}
+                  title={`Cogniwise Artificial Intelligence Literacy certificate: Module ${module.number}`}
+                />
               </>
             ) : (
               <button
@@ -147,11 +171,12 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
 
       {/* Certificate Preview */}
       <div className="max-w-5xl mx-auto p-6">
-        <div className="relative rounded-2xl overflow-hidden shadow-lg bg-white border-8 border-primary">
-          {/* Payment Required Overlay */}
+        <div className="relative rounded-2xl overflow-clip shadow-lg bg-white border-8 border-primary">
+          {/* Payment Required Overlay: the certificate is taller than most screens, so the
+              card sits at its top and stays in view while the page scrolls */}
           {!isPaid && (
-            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md">
-              <div className="text-center p-8 bg-white/90 rounded-2xl shadow-2xl max-w-md mx-4">
+            <div className="absolute inset-0 z-50 flex items-start justify-center pt-10 bg-black/60 backdrop-blur-md">
+              <div className="sticky top-10 text-center p-8 bg-white/90 rounded-2xl shadow-2xl max-w-md mx-4">
                 <Lock className="w-16 h-16 text-primary mx-auto mb-4" />
                 <h3 className="text-2xl font-bold text-foreground mb-2">Certificate Locked</h3>
                 <p className="text-muted-foreground mb-6">

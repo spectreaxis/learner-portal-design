@@ -871,6 +871,8 @@ table, so no database rollback is needed.
 6. **Trust proxy configuration required** - When behind Traefik/Nginx
    - `app.set('trust proxy', 1)` - Trust first proxy only (security best practice)
    - Needed for rate limiting with X-Forwarded-For header
+   - Rate limits (`backend/src/middleware/rate-limit.middleware.ts`): failed sign-ins (20) and sign-ups (30) per client IP, signed-in learners 600 requests per account, public content 1000 per IP, all per 15 minutes
+   - Sign-in reaches the backend from the portal's server, which forwards the client IP it got from Traefik (the last `X-Forwarded-For` entry). This relies on exactly one proxy in front of each app: adding another (e.g. Cloudflare) needs `trust proxy` and that forwarding updated, or every learner shares one sign-in limit
 
 ### Build & Deployment
 7. **Nixpacks cache mount issue** - Build cache files (tsconfig.tsbuildinfo) must be gitignored

@@ -1,16 +1,33 @@
 'use client';
 
 import { Header } from '@/components/header';
+import { LoadError } from '@/components/load-error';
+import { failedLoad } from '@/lib/failed-load';
 import { ModuleCard } from '@/components/module-card';
 import { Award, Clock, BookOpen, Target, Loader2 } from 'lucide-react';
 import { useModules } from '@/lib/hooks/useModules';
 import { useLearnerProgress } from '@/lib/hooks/useLearner';
 
 export default function LearnPage() {
-  const { data: modules = [], isLoading: modulesLoading } = useModules();
-  const { data: learnerData, isLoading: learnerLoading } = useLearnerProgress();
+  const modulesQuery = useModules();
+  const learnerQuery = useLearnerProgress();
+  const { data: modules = [], isLoading: modulesLoading } = modulesQuery;
+  const { data: learnerData, isLoading: learnerLoading } = learnerQuery;
 
   const isLoading = modulesLoading || learnerLoading;
+  const loadError = failedLoad(modulesQuery, learnerQuery);
+
+  if (loadError) {
+    return (
+      <>
+        <Header
+          title="Course Overview"
+          subtitle="Cogniwise Artificial Intelligence Literacy Basic AI/ML Course"
+        />
+        <LoadError {...loadError} />
+      </>
+    );
+  }
 
   if (isLoading) {
     return (

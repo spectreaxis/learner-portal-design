@@ -2,6 +2,7 @@ import express from 'express';
 import { ProviderFactory } from '../config/providers.config';
 import { AuthService } from '../application/services/AuthService';
 import { AppError } from '../core/errors/AppError';
+import { loginRateLimiter, registerRateLimiter } from '../middleware/rate-limit.middleware';
 
 const router = express.Router();
 
@@ -10,7 +11,7 @@ const authProvider = ProviderFactory.getAuthProvider();
 const authService = new AuthService(authProvider);
 
 // Register
-router.post('/register', async (req, res) => {
+router.post('/register', registerRateLimiter, async (req, res) => {
   try {
     const { email, password, name } = req.body;
 
@@ -37,7 +38,7 @@ router.post('/register', async (req, res) => {
 });
 
 // Login
-router.post('/login', async (req, res) => {
+router.post('/login', loginRateLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 

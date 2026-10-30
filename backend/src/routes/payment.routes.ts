@@ -1,5 +1,6 @@
 import express, { Response } from 'express';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
+import { learnerRateLimiter } from '../middleware/rate-limit.middleware';
 import { ProviderFactory } from '../config/providers.config';
 import { PaymentService } from '../application/services/PaymentService';
 import { PaymentRepository } from '../infrastructure/database/repositories/PaymentRepository';
@@ -25,7 +26,7 @@ function sendError(res: Response, error: any, fallback: string) {
   res.status(500).json({ error: fallback });
 }
 
-router.use(authenticate);
+router.use(learnerRateLimiter, authenticate);
 
 // Price and paid status of a certificate (reconciles unfinished payments)
 router.get('/certificates/:certificateId', async (req: AuthRequest, res) => {

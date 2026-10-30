@@ -3,6 +3,8 @@
 import { Header } from '@/components/header';
 import { ProgressRing } from '@/components/progress';
 import { ModuleCard } from '@/components/module-card';
+import { LoadError } from '@/components/load-error';
+import { failedLoad } from '@/lib/failed-load';
 import { useModules } from '@/lib/hooks/useModules';
 import { useLearnerProgress } from '@/lib/hooks/useLearner';
 import { useSession } from 'next-auth/react';
@@ -11,10 +13,22 @@ import Link from 'next/link';
 
 export default function Dashboard() {
   const { data: session } = useSession();
-  const { data: modules = [], isLoading: modulesLoading } = useModules();
-  const { data: learnerData, isLoading: learnerLoading } = useLearnerProgress();
+  const modulesQuery = useModules();
+  const learnerQuery = useLearnerProgress();
+  const { data: modules = [], isLoading: modulesLoading } = modulesQuery;
+  const { data: learnerData, isLoading: learnerLoading } = learnerQuery;
 
   const isLoading = modulesLoading || learnerLoading;
+  const loadError = failedLoad(modulesQuery, learnerQuery);
+
+  if (loadError) {
+    return (
+      <>
+        <Header title="Dashboard" />
+        <LoadError {...loadError} />
+      </>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -39,6 +53,10 @@ export default function Dashboard() {
 
   // Determine if user has started learning (has any completed lessons or in-progress)
   const hasStarted = completedLessons > 0 || (learnerData?.progress && learnerData.progress.length > 0);
+  // The button is for the current module, which may not be started even when the course is
+  const hasStartedCurrentModule = !!currentModule && learnerData?.progress?.some(
+    (p: any) => p.lesson?.moduleId === currentModule.id
+  );
 
   const firstName = session?.user?.name?.split(' ')[0] || 'there';
   const totalCertificates = learnerData?.certificates?.length || 0;
@@ -141,7 +159,7 @@ export default function Dashboard() {
                     href={`/learn/${currentModule.id}`}
                     className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors shadow-sm"
                   >
-                    {hasStarted ? 'Continue' : 'Get Started'}
+                    {hasStartedCurrentModule ? 'Continue' : hasStarted ? 'Start Module' : 'Get Started'}
                     <ChevronRight className="w-4 h-4" />
                   </Link>
                 </div>
