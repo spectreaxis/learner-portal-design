@@ -1,17 +1,20 @@
 @import 'tailwindcss';
 
-/* Tokens: see DESIGN.md. Pine dominates, signal is the single accent. */
+/* Tokens: see DESIGN.md. Values are the learner portal's own palette (its
+   app/globals.css oklch tokens, converted to hex); names describe roles:
+   pine = ink and dark surfaces, paper = page, signal = the blue accent. */
 :root {
-  --pine: #0e2a23;
-  --pine-800: #16382f;
-  --pine-700: #22493e;
-  --paper: #f2ecdf;
-  --paper-200: #e7dfcd;
-  --paper-300: #d6ccb5;
-  --signal: #ff5c39;
-  --signal-deep: #b8321a;
-  --moss: #4f6a5f;
-  --sage: #a9bdb1;
+  --pine: #060b10; /* portal --foreground */
+  --pine-800: #0a0e11; /* portal dark --card */
+  --pine-700: #292e34; /* hairlines and contours on dark */
+  --paper: #fafafa; /* portal --background */
+  --paper-200: #eff2f5; /* portal --muted */
+  --paper-300: #dfe1e4; /* portal --border */
+  --signal: #007eb7; /* portal --primary: graphics, routes, icons */
+  --signal-deep: #006ea4; /* primary nudged darker for text and button fills (AA) */
+  --signal-ink: #ffffff; /* label colour on signal-deep */
+  --moss: #51565b; /* portal --muted-foreground */
+  --sage: #8f8f8f; /* portal dark --muted-foreground */
   --ease-survey: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -24,6 +27,7 @@
   --color-paper-300: var(--paper-300);
   --color-signal: var(--signal);
   --color-signal-deep: var(--signal-deep);
+  --color-signal-ink: var(--signal-ink);
   --color-moss: var(--moss);
   --color-sage: var(--sage);
 
@@ -57,13 +61,20 @@
   }
 
   ::selection {
-    background: var(--signal);
-    color: var(--pine);
+    background: var(--signal-deep);
+    color: #fff;
   }
 
   :focus-visible {
     outline: 2px solid var(--signal-deep);
     outline-offset: 3px;
+  }
+
+  /* Dark sections switch to the portal's dark-mode blue, which needs dark labels. */
+  .on-pine {
+    --signal: #009ed8;
+    --signal-deep: #009ed8;
+    --signal-ink: var(--pine);
   }
 
   .on-pine :focus-visible {

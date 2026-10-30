@@ -11,8 +11,8 @@ organisation starts at base camp (literacy) and climbs to the summit
 Every visual choice comes from an Ordnance-Survey or field-survey-office
 sensibility: contour lines, plotted routes, waypoints, grid references,
 legends, compass bearings, survey-sheet margins and marginalia. It should feel
-like a well-made printed field map: warm paper, dense ink, one hot signal
-colour, precise labels.
+like a well-made printed field map: clean paper, dense ink, one signal colour
+(the portal's blue), precise labels.
 
 If a choice doesn't fit "a survey office that teaches AI", it doesn't ship.
 
@@ -20,33 +20,42 @@ If a choice doesn't fit "a survey office that teaches AI", it doesn't ship.
 
 ## Palette
 
-Defined once as CSS variables in `app/globals.css` and exposed to Tailwind via `@theme`.
+The palette is the **learner portal's own** (its `app/globals.css` oklch tokens,
+converted to hex), so the marketing site and the product read as one brand.
+Defined once as CSS variables in `app/globals.css` and exposed to Tailwind via
+`@theme`. Token names are roles carried over from the original concept:
+`pine` = ink and dark surfaces, `paper` = page, `signal` = the blue accent.
 
-| Token            | Hex       | Role                                                        |
-| ---------------- | --------- | ----------------------------------------------------------- |
-| `--pine`         | `#0E2A23` | **Dominant.** Ink, dark sections, primary type.             |
-| `--pine-800`     | `#16382F` | Raised surfaces on pine.                                    |
-| `--pine-700`     | `#22493E` | Rules and contour lines on pine.                            |
-| `--paper`        | `#F2ECDF` | Page ground. Warm survey paper.                             |
-| `--paper-200`    | `#E7DFCD` | Inset panels, map sheets.                                   |
-| `--paper-300`    | `#D6CCB5` | Contour lines and hairlines on paper (decorative only).     |
-| `--signal`       | `#FF5C39` | **The one accent.** Route lines, waypoints, CTAs on pine.   |
-| `--signal-deep`  | `#B8321A` | Accent when used *as text* on paper (AA).                   |
-| `--moss`         | `#4F6A5F` | Secondary text on paper.                                    |
-| `--sage`         | `#A9BDB1` | Secondary text on pine.                                     |
+| Token            | Hex       | Portal source               | Role                                              |
+| ---------------- | --------- | --------------------------- | ------------------------------------------------- |
+| `--pine`         | `#060B10` | `--foreground`              | **Dominant.** Ink, dark sections, primary type.   |
+| `--pine-800`     | `#0A0E11` | dark `--card`               | Raised surfaces on dark.                          |
+| `--pine-700`     | `#292E34` | (dark border, one step up)  | Rules and contour lines on dark.                  |
+| `--paper`        | `#FAFAFA` | `--background`              | Page ground.                                      |
+| `--paper-200`    | `#EFF2F5` | `--muted`                   | Inset panels, map sheets.                         |
+| `--paper-300`    | `#DFE1E4` | `--border`                  | Hairlines and grid on paper (decorative).         |
+| `--signal`       | `#007EB7` | `--primary`                 | **The one accent.** Routes, waypoints, icons.     |
+| `--signal-deep`  | `#006EA4` | `--primary`, nudged darker  | Blue *text* on paper and button fills (AA).       |
+| `--signal-ink`   | `#FFFFFF` | `--primary-foreground`      | Label on signal-deep.                             |
+| `--moss`         | `#51565B` | `--muted-foreground`        | Secondary text on paper.                          |
+| `--sage`         | `#8F8F8F` | dark `--muted-foreground`   | Secondary text on dark.                           |
+
+Inside `.on-pine` (dark sections) the accent switches to the portal's dark-mode
+primary: `--signal` and `--signal-deep` become `#009ED8`, and `--signal-ink`
+becomes pine.
 
 ### Contrast (WCAG 2.2, verified)
-- pine on paper: **12.98:1**. Paper on pine is the same.
-- moss on paper: **5.01:1**. Sage on pine: **7.71:1**.
-- signal-deep on paper: **5.08:1**. Pine on signal (button label): **4.98:1**.
-- `--signal` on paper is **2.6:1**, so it **never carries text or meaning on paper**. It is
-  used there only for decorative route lines beside a labelled element.
+- pine on paper: **18.9:1**. Moss on paper: **7.1:1**. Sage on pine: **6.1:1**.
+- signal-deep on paper: **5.3:1**. White on signal-deep (button label): **5.3:1**.
+- On dark: `#009ED8` on pine **6.5:1**, both as text and with a pine label on a blue button.
+- `--signal` (`#007EB7`) on paper is **4.3:1**. That passes 3:1 for graphics but not
+  4.5:1 for body text, which is why blue text and buttons use `--signal-deep`.
 
 Rules:
 - No gradients except one: the radial "sun-spot" glow behind the summit, which is
-  signal at 0 to 18% alpha.
+  blue signal at 0 to 18% alpha.
 - No glassmorphism, no blur panels, no drop-shadow stacks.
-- One shadow only, the **"sheet" shadow**: a hard 1px pine-tinted offset plus
+- One shadow only, the **"sheet" shadow**: a hard 1px ink-tinted offset plus
   `6px 6px 0` of paper-300. It reads as a printed sheet lying on a desk, not a floating card.
 
 ---

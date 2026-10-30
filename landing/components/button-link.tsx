@@ -8,8 +8,8 @@ type ButtonLinkProps = {
 }
 
 const variants = {
-  // Pine border keeps the edge at 3:1+ against paper; label is pine on signal (4.98:1).
-  signal: 'bg-signal text-pine border-pine hover:bg-pine hover:text-paper hover:border-pine',
+  // White on signal-deep is 5.3:1; inside .on-pine the tokens flip to light blue with a dark label (6.5:1).
+  signal: 'bg-signal-deep text-signal-ink border-signal-deep hover:bg-pine hover:text-paper hover:border-pine',
   ghost: 'bg-transparent text-pine border-pine/30 hover:border-pine',
   'ghost-light': 'bg-transparent text-paper border-paper/30 hover:border-paper',
 } as const
