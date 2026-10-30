@@ -12,8 +12,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Flame,
-  GraduationCap,
 } from 'lucide-react';
+import { BrandMark } from '@/components/brand-mark';
 import { cn } from '@/lib/utils';
 import { useMobileSidebar } from './auth-layout';
 
@@ -61,7 +61,7 @@ export const Sidebar = memo(function Sidebar() {
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 h-[72px] border-b border-sidebar-border">
         <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center flex-shrink-0 shadow-sm">
-          <GraduationCap className="w-5 h-5 text-primary-foreground" />
+          <BrandMark className="w-full h-full text-primary-foreground" />
         </div>
         {!collapsed && (
           <div className="flex flex-col overflow-hidden">

@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { GraduationCap, Mail, Lock, User, AlertCircle, Loader2, CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, AlertCircle, Loader2, CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { BrandMark } from '@/components/brand-mark';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -79,7 +80,7 @@ export default function RegisterPage() {
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
           <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center shadow-lg mb-4">
-            <GraduationCap className="w-8 h-8 text-primary-foreground" />
+            <BrandMark className="w-full h-full text-primary-foreground" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">Create Account</h1>
           <p className="text-muted-foreground text-sm mt-1">Start your AI/ML learning journey</p>

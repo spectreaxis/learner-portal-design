@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { GraduationCap, Mail, Lock, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
+import { BrandMark } from '@/components/brand-mark';
 
 // callbackUrl may be absolute (set by the auth proxy); accept it only if it points at this origin
 function getSafeCallbackPath(): string {
@@ -60,7 +61,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
           <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center shadow-lg mb-4">
-            <GraduationCap className="w-8 h-8 text-primary-foreground" />
+            <BrandMark className="w-full h-full text-primary-foreground" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">Cogniwise Artificial Intelligence Literacy</h1>
           <p className="text-muted-foreground text-sm mt-1">Sign in to continue your learning</p>
