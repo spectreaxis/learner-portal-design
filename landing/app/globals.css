@@ -1,0 +1,188 @@
+@import 'tailwindcss';
+
+/* Tokens: see DESIGN.md. Pine dominates, signal is the single accent. */
+:root {
+  --pine: #0e2a23;
+  --pine-800: #16382f;
+  --pine-700: #22493e;
+  --paper: #f2ecdf;
+  --paper-200: #e7dfcd;
+  --paper-300: #d6ccb5;
+  --signal: #ff5c39;
+  --signal-deep: #b8321a;
+  --moss: #4f6a5f;
+  --sage: #a9bdb1;
+  --ease-survey: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@theme inline {
+  --color-pine: var(--pine);
+  --color-pine-800: var(--pine-800);
+  --color-pine-700: var(--pine-700);
+  --color-paper: var(--paper);
+  --color-paper-200: var(--paper-200);
+  --color-paper-300: var(--paper-300);
+  --color-signal: var(--signal);
+  --color-signal-deep: var(--signal-deep);
+  --color-moss: var(--moss);
+  --color-sage: var(--sage);
+
+  --font-display: var(--font-fraunces), 'Iowan Old Style', Georgia, serif;
+  --font-sans: var(--font-instrument), 'Helvetica Neue', sans-serif;
+  --font-mono: var(--font-plex-mono), 'SFMono-Regular', Menlo, monospace;
+
+  --ease-survey: var(--ease-survey);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
+  body {
+    background: var(--paper);
+    color: var(--pine);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: var(--signal);
+    color: var(--pine);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--signal-deep);
+    outline-offset: 3px;
+  }
+
+  .on-pine :focus-visible {
+    outline-color: var(--signal);
+  }
+}
+
+@keyframes hero-rise {
+  from { transform: translateY(105%); }
+  to { transform: none; }
+}
+/* Starts at a whisper of opacity, not zero: fully transparent text doesn't count as painted for LCP. */
+@keyframes hero-fade {
+  from { opacity: 0.12; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+
+@layer components {
+  .wrap {
+    width: 100%;
+    max-width: 1440px;
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+  @media (min-width: 640px) {
+    .wrap { padding-inline: 2rem; }
+  }
+  @media (min-width: 1024px) {
+    .wrap { padding-inline: 3rem; }
+  }
+
+  .display {
+    font-family: var(--font-display);
+    font-variation-settings: 'opsz' 96;
+    font-weight: 460;
+  }
+  .display em {
+    font-family: var(--font-fraunces-italic), 'Iowan Old Style', Georgia, serif;
+    font-style: italic;
+    font-variation-settings: 'opsz' 96, 'WONK' 1;
+  }
+
+  .text-display-xl {
+    font-size: clamp(3.25rem, 1.6rem + 7.4vw, 8.5rem);
+    line-height: 0.92;
+    letter-spacing: -0.035em;
+  }
+  .text-display-lg {
+    font-size: clamp(2.5rem, 1.5rem + 4.4vw, 5.25rem);
+    line-height: 0.98;
+    letter-spacing: -0.028em;
+  }
+  .text-display-md {
+    font-size: clamp(1.875rem, 1.45rem + 1.7vw, 3rem);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+  }
+  .text-lede {
+    font-size: clamp(1.125rem, 1.03rem + 0.4vw, 1.375rem);
+    line-height: 1.5;
+  }
+
+  .label {
+    font-family: var(--font-mono);
+    font-size: 0.71875rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    line-height: 1.4;
+  }
+
+  /* Printed-sheet shadow: the only shadow in the system. */
+  .sheet {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--pine) 14%, transparent),
+      6px 6px 0 0 var(--paper-300);
+  }
+
+  /* Survey crosshair tick used at grid corners. */
+  .tick {
+    position: absolute;
+    width: 11px;
+    height: 11px;
+    background:
+      linear-gradient(currentColor, currentColor) center / 1px 100% no-repeat,
+      linear-gradient(currentColor, currentColor) center / 100% 1px no-repeat;
+  }
+
+  /* Hero entrance runs in CSS so the copy paints before hydration. */
+  .hero-line {
+    animation: hero-rise 0.9s var(--ease-survey) both;
+    animation-delay: var(--d, 0s);
+  }
+  .hero-fade {
+    animation: hero-fade 0.8s var(--ease-survey) both;
+    animation-delay: var(--d, 0s);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-line,
+    .hero-fade {
+      animation: none;
+    }
+  }
+
+  .skip-link {
+    position: absolute;
+    left: 1rem;
+    top: -4rem;
+    z-index: 100;
+    background: var(--pine);
+    color: var(--paper);
+    padding: 0.75rem 1rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    transition: top 0.2s var(--ease-survey);
+  }
+  .skip-link:focus {
+    top: 1rem;
+  }
+}
