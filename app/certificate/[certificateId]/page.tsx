@@ -5,6 +5,7 @@ import { useLearnerProgress } from '@/lib/hooks/useLearner';
 import { useModules } from '@/lib/hooks/useModules';
 import { useCertificatePaymentStatus } from '@/lib/hooks/usePayment';
 import { Award, Download, Share2, GraduationCap, Shield, Loader2, ArrowLeft, Lock } from 'lucide-react';
+import { BrandMark } from '@/components/brand-mark';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -185,6 +186,7 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
               <div className="text-center">
                 {/* Logo and Issuer */}
                 <div className="mb-8">
+                  <BrandMark className="w-12 h-12 mx-auto mb-3 text-primary" />
                   <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-1">
                     COGNIWISE
                   </p>

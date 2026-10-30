@@ -4,6 +4,7 @@ import { Header } from '@/components/header';
 import { useLearnerProgress } from '@/lib/hooks/useLearner';
 import { useModules } from '@/lib/hooks/useModules';
 import { Award, Download, Share2, ExternalLink, Lock, CheckCircle2, GraduationCap, Shield, Loader2 } from 'lucide-react';
+import { BrandMark } from '@/components/brand-mark';
 import { cn } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
@@ -355,7 +356,7 @@ function OldCertificatePage_DELETE_THIS() {
                   {/* Logo and Issuer */}
                   <div className="flex items-center justify-center gap-3 mb-10">
                     <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center shadow-sm">
-                      <GraduationCap className="w-7 h-7 text-primary-foreground" />
+                      <BrandMark className="w-9 h-9 text-primary-foreground" />
                     </div>
                     <div className="text-left">
                       <p className="text-xs font-semibold text-primary uppercase tracking-widest">
