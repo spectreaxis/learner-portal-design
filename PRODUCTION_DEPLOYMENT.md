@@ -1,5 +1,10 @@
 # Production Deployment Record
-**CogniWise AI Learner Portal - Deployed October 26, 2026**
+**CogniWise AI Learner Portal - Deployed October 26, 2026 · Updated October 30, 2026**
+
+> **October 30, 2026:** the portal moved from `cogniwiseai.com` to `learn.cogniwiseai.com`,
+> and the new marketing landing page (`landing/`) now serves `cogniwiseai.com`. Server-side
+> calls from the portal reach the backend through the Docker network alias `cogniwise-api`
+> instead of a container IP. See [Domain Move & Internal Alias](#domain-move--internal-alias-october-30-2026).
 
 Technical record of the production deployment including all configurations, errors encountered, and solutions implemented.
 
@@ -23,9 +28,10 @@ Technical record of the production deployment including all configurations, erro
 
 ### DNS Records (Namecheap Advanced DNS)
 ```
-A Record    @      139.84.235.168
-A Record    www    139.84.235.168
-A Record    api    139.84.235.168
+A Record    @      139.84.235.168   # landing page
+A Record    www    139.84.235.168   # landing page
+A Record    learn  139.84.235.168   # learner portal (added Oct 30, 2026)
+A Record    api    139.84.235.168   # backend API
 ```
 
 ### Platform
@@ -102,10 +108,10 @@ JWT_SECRET=${GENERATE_RANDOM_SECRET}
 DATA_PROVIDER=prisma
 
 # Server Configuration
-APP_URL=https://api.cogniwiseai.com
-FRONTEND_URL=https://cogniwiseai.com
+APP_URL=https://learn.cogniwiseai.com        # builds certificate verify links: ${APP_URL}/verify/<id>
+FRONTEND_URL=https://learn.cogniwiseai.com   # CORS: the only origin allowed; must match the portal exactly
 PORT=4000
-NODE_ENV=production
+NODE_ENV=production                          # see note: production reported "development" on Oct 30
 
 # M-Pesa Configuration
 MPESA_ENVIRONMENT=sandbox
@@ -126,6 +132,18 @@ CERTIFICATE_PRICE=500
 ```
 
 **Important Notes:**
+- The backend does **not** use `API_URL`; only the portal does
+- `APP_URL` was `https://api.cogniwiseai.com` until Oct 30, 2026, which pointed stored certificate
+  verify links at the API. The portal builds its own verify links, so users were unaffected, but
+  keep it on the portal domain
+- `NODE_ENV` must actually be `production`. On Oct 30, 2026 `/health` reported `"environment":"development"`.
+  In development mode the backend returns error details and stack traces to API callers, logs every
+  Prisma query, and if `JWT_SECRET` is missing silently signs tokens with the public fallback
+  `default-secret-change-in-production`. Confirm `JWT_SECRET` is set *before* switching, because
+  production mode refuses to start without it:
+  `docker exec <backend> sh -c 'test -n "$JWT_SECRET" && echo set || echo MISSING'`
+- `MPESA_CALLBACK_URL` must stay the public `api.` URL (Safaricom calls it from the internet). Never
+  use the internal `cogniwise-api` alias there
 - `DATABASE_URL` uses container name (found via `docker ps` on server)
 - All secrets stored in Coolify dashboard, NOT committed to git
 - Set separately for Production and Preview environments
@@ -250,7 +268,7 @@ cp lib/types.ts backend/prisma/
 - **Base Directory:** `/` (root)
 - **Build Pack:** Nixpacks
 - **Port:** 3000
-- **Domains:** cogniwiseai.com, www.cogniwiseai.com
+- **Domains:** learn.cogniwiseai.com (was cogniwiseai.com, www.cogniwiseai.com until Oct 30, 2026)
 
 ### Build Commands
 ```bash
@@ -265,17 +283,19 @@ npm start
 NEXT_PUBLIC_API_URL=https://api.cogniwiseai.com/api
 
 # Server-side API calls (NextAuth internal container communication)
-API_URL=http://10.0.1.12:4000/api
+# Uses the backend's Docker network alias, which survives redeploys. Never use a container IP.
+API_URL=http://cogniwise-api:4000/api
 
 # NextAuth Configuration
-NEXTAUTH_URL=https://cogniwiseai.com
+NEXTAUTH_URL=https://learn.cogniwiseai.com
 NEXTAUTH_SECRET=${GENERATE_RANDOM_SECRET}
 ```
 
 **Important Notes:**
 - `NEXT_PUBLIC_API_URL` - Used by browser for client-side API calls (HTTPS)
-- `API_URL` - Used by NextAuth server-side for internal Docker communication (HTTP + internal IP)
-  - Find backend IP: `docker inspect ${BACKEND_CONTAINER} --format '{{.NetworkSettings.Networks.coolify.IPAddress}}'`
+- `API_URL` - Used by NextAuth server-side for internal Docker communication (HTTP + network alias)
+  - The alias `cogniwise-api` is set on the backend app: General → Access → Edit Networking → Network aliases
+  - Do **not** use the container IP: it changes on every backend redeploy and silently breaks login
   - SSL terminates at Traefik proxy, internal communication uses HTTP
 - `NEXTAUTH_SECRET` - Generate using: `openssl rand -base64 32`
 - Configure separately for Production and Preview environments in Coolify
@@ -378,6 +398,10 @@ const API_URL = process.env.API_URL || 'http://api.cogniwiseai.com/api';
 - External traffic uses HTTPS through proxy
 - Backend internal IP: `10.0.1.12:4000` (found via `docker inspect`)
 
+> **Superseded October 30, 2026:** the IP approach broke when the backend was redeployed
+> (its IP moved to `10.0.1.14`). `API_URL` now uses the network alias `cogniwise-api`.
+> See [Domain Move & Internal Alias](#domain-move--internal-alias-october-30-2026).
+
 #### Issue 5: Success
 **Deployment:** All issues resolved
 **Status:** ✅ Deployed successfully
@@ -393,6 +417,95 @@ const API_URL = process.env.API_URL || 'http://api.cogniwiseai.com/api';
 - ✅ Manual login works
 - ✅ Session persists across page reloads
 - ✅ Protected routes accessible after authentication
+
+---
+
+## Landing Page Deployment
+
+Marketing site for `cogniwiseai.com`, a separate Next.js app in `landing/` (see `landing/README.md`).
+
+### Configuration
+- **Base Directory:** `/landing`
+- **Build Pack:** Railpack
+- **Port:** 3000
+- **Watch paths:** `landing/**` (only landing changes redeploy it)
+- **Health check:** disabled (same reason as frontend Issue 2)
+- **Domains:** `https://cogniwiseai.com`, `https://www.cogniwiseai.com` (both serve the site; the
+  page's canonical tag points to the apex, so search engines index `cogniwiseai.com`)
+- **Environment variables:** none
+
+### Build Commands
+```bash
+npm ci
+npm run build
+npm run start
+```
+
+### Details
+- Fully static output; it does not call the backend, so backend or portal outages don't affect it
+- Next.js 16.4.3 (clears the RCE advisories affecting 16.2.x); `package.json` `engines` requires Node
+  >= 20.9 so Railpack picks a supported runtime; npm lockfile (`landing/package-lock.json`)
+- `next.config.mjs` pins `turbopack.root` to `landing/`, otherwise Turbopack picks up the parent
+  repo as workspace root and builds can fail intermittently
+- Brand facts live in `landing/lib/site.ts`: `email` (`hello@cogniwiseai.com`, the target of every
+  "Book a briefing" button, so that mailbox or forward must exist) and `portalUrl`
+  (`https://learn.cogniwiseai.com`, used for Sign up and Learner sign-in links)
+- Colours are the portal's own palette (see `landing/DESIGN.md`)
+
+The landing app 308-redirects `/verify/*`, `/certificate/*`, `/learn/*`, `/settings`, `/login` and
+`/register` to `learn.cogniwiseai.com`, so certificates issued with `cogniwiseai.com/verify/...` links
+keep working. The redirect list is in `landing/next.config.mjs`; if the portal ever moves, update it
+together with `portalUrl` in `landing/lib/site.ts`.
+
+---
+
+## Domain Move & Internal Alias (October 30, 2026)
+
+### Domain move
+| App | Before | After |
+|-----|--------|-------|
+| Landing page (new) | - | `cogniwiseai.com`, `www.cogniwiseai.com` |
+| Learner portal | `cogniwiseai.com`, `www.cogniwiseai.com` | `learn.cogniwiseai.com` |
+| Backend API | `api.cogniwiseai.com` | unchanged |
+
+Settings changed: DNS `learn` A record; portal `NEXTAUTH_URL=https://learn.cogniwiseai.com`;
+backend `FRONTEND_URL=https://learn.cogniwiseai.com`. Each app redeployed (not just restarted).
+
+#### Issue 1: Course modules empty after the move
+**Symptom:** login worked on `learn.cogniwiseai.com` but the dashboard showed no modules.
+**Root cause:** the backend still allowed only `https://cogniwiseai.com` (CORS); browser API calls
+from the new origin were rejected. Login was unaffected because it runs server-side.
+**Fix:** backend `FRONTEND_URL=https://learn.cogniwiseai.com`, then redeploy the backend.
+
+#### Issue 2: Login fails with "Invalid email or password"
+**Symptom:** every login returned 401; registration still worked. The backend log showed **no**
+`POST /api/auth/login` at all.
+**Root cause:** the backend redeploy in Issue 1 created a new container with a new internal IP
+(`10.0.1.12` became `10.0.1.14`). The portal's `API_URL` still pointed at the old IP, so the
+server-side NextAuth call failed. `authorize()` catches the error and returns `null`, which NextAuth
+reports as invalid credentials.
+**Fix (permanent):** a Docker network alias that stays the same across deploys.
+1. Backend → General → Access → Edit Networking → Network aliases: `cogniwise-api` → Redeploy backend
+2. Verify from the server:
+   ```bash
+   BACKEND=$(docker ps --format '{{.Names}}' | grep tsmkgipcclkknctzusxiczel | head -1)
+   PORTAL=$(docker ps --format '{{.Names}}' | grep jwxcaq2n35ywyftobsnas9oy | head -1)
+   docker inspect "$BACKEND" --format '{{json .NetworkSettings.Networks.coolify.Aliases}}'   # includes "cogniwise-api"
+   docker exec "$PORTAL" node -e "fetch('http://cogniwise-api:4000/health').then(r=>r.text()).then(console.log)"
+   ```
+3. Portal `API_URL=http://cogniwise-api:4000/api` → **Redeploy** portal
+4. Confirm the running portal picked it up (a new container timestamp, and the variable inside it):
+   ```bash
+   docker exec "$PORTAL" printenv API_URL   # http://cogniwise-api:4000/api
+   ```
+   During the fix, login kept failing after the variable was changed because the portal had not
+   been redeployed: the old container (`...-20261030T051655`) was still running with
+   `API_URL=http://10.0.1.12:4000/api`. Saving an env var in Coolify does nothing until a Redeploy.
+
+**Note:** the backend's plain Coolify name (`tsmkgipcclkknctzusxiczel`, without the timestamp) does
+**not** resolve; Coolify only registers the timestamped container name, hence the custom alias.
+Saving the alias shows a "Validating DNS failed" toast about the app's public domains. It is
+unrelated to the alias, and the setting still saves.
 
 ---
 
@@ -491,7 +604,7 @@ Applied via Prisma migrations (`backend/prisma/migrations/`):
 ```
 ┌─────────────────────────────────────────┐
 │         Namecheap DNS                   │
-│  cogniwiseai.com → 139.84.235.168       │
+│  @, www, learn, api → 139.84.235.168    │
 └─────────────────────────────────────────┘
                     │
                     ▼
@@ -520,9 +633,10 @@ Applied via Prisma migrations (`backend/prisma/migrations/`):
 └─────────────────────────────────────────┘
 
 Internal Docker Communication:
-- Frontend → Backend: http://10.0.1.12:4000
+- Frontend → Backend: http://cogniwise-api:4000 (Docker network alias)
 - Backend → Database: postgresql://postgres@wnvgablpoq3v1v29qudhhzmr:5432
-- External → Frontend: https://cogniwiseai.com (via Traefik)
+- External → Landing: https://cogniwiseai.com (via Traefik)
+- External → Frontend: https://learn.cogniwiseai.com (via Traefik)
 - External → Backend: https://api.cogniwiseai.com (via Traefik)
 ```
 
@@ -545,9 +659,14 @@ Internal Docker Communication:
 - Prisma ORM
 - Direct connection (no pooling needed for self-hosted)
 
+**Landing page (`landing/`, added Oct 30, 2026):**
+- Next.js 16.4.3, React 19, TypeScript 5.7.3
+- Tailwind CSS 4.3, Framer Motion 13.5.1
+- Statically prerendered; Railpack build
+
 **Deployment:**
 - Coolify (Docker-based PaaS)
-- Nixpacks build system
+- Nixpacks build system (portal, backend; deprecated upstream, see Next Steps), Railpack (landing)
 - Traefik reverse proxy
 - Let's Encrypt SSL
 
@@ -570,6 +689,15 @@ cd14a64 - Fix Prisma orderBy validation errors
 02319b9 - Copy types.ts to backend for seed script
 4493cfc - Fix NextAuth server-side API calls to use HTTP protocol
 ```
+
+**Landing Page & Domain Move (October 30, 2026):**
+```
+0b10d7a - Add cogniwiseai.com marketing landing page
+a3f443c - Use the learner portal's colour palette on the landing page
+57b243a - Add Cogniwise mark as portal favicon and on certificates (also fixes certificate PDF layout)
+e5b42ad - Use the Cogniwise mark as the portal logo
+```
+The `cogniwise-api` alias and the env var changes were made in Coolify, not in git.
 
 ---
 
@@ -600,6 +728,14 @@ cd14a64 - Fix Prisma orderBy validation errors
 | Update documentation | 30 min | ✅ |
 | **Subtotal** | **~2.5 hours** | ✅ |
 
+### Landing Page & Domain Move (October 30, 2026)
+| Task | Status |
+|------|--------|
+| Landing page deployed to cogniwiseai.com | ✅ |
+| Portal moved to learn.cogniwiseai.com | ✅ |
+| Backend CORS updated (FRONTEND_URL) | ✅ |
+| Login outage fixed with `cogniwise-api` network alias | ✅ |
+
 ### Total Deployment Time
 | Phase | Time | Status |
 |-------|------|--------|
@@ -611,7 +747,8 @@ cd14a64 - Fix Prisma orderBy validation errors
 
 ## Production URLs
 
-- **Frontend:** https://cogniwiseai.com
+- **Landing page:** https://cogniwiseai.com
+- **Learner portal:** https://learn.cogniwiseai.com
 - **Backend API:** https://api.cogniwiseai.com
 - **Health Check:** https://api.cogniwiseai.com/health
 - **Coolify Dashboard:** http://139.84.235.168:8000
@@ -666,6 +803,13 @@ cd14a64 - Fix Prisma orderBy validation errors
 - [ ] Database performance monitoring
 
 ### 4. Security Hardening
+- [ ] **Upgrade the portal's Next.js from 16.2.6 to >= 16.4.3.** 16.2.x has published critical
+      advisories, including unauthenticated remote code execution in the Image Optimization API
+      (enabled in the portal's `next.config.mjs`). The landing page is already on 16.4.3
+- [ ] Set backend `NODE_ENV=production` after confirming `JWT_SECRET` is set (see Backend notes)
+- [ ] Set backend `APP_URL=https://learn.cogniwiseai.com`
+- [ ] Make login report "service unavailable" instead of "Invalid email or password" when the
+      backend is unreachable (`authorize()` in `app/api/auth/[...nextauth]/route.ts` hides it)
 - [ ] Enable SSH key-only authentication (disable password auth)
 - [ ] Configure UFW firewall (allow only 22, 80, 443, 8000)
 - [ ] Install fail2ban for SSH protection
@@ -682,7 +826,18 @@ cd14a64 - Fix Prisma orderBy validation errors
 - [ ] Add remaining course modules
 - [ ] Upload video content
 - [ ] Create quiz questions
-- [ ] Design certificates template
+- [x] Certificate template: logo added and PDF layout fixed (text overlapped before Oct 30, 2026)
+- [ ] Confirm the certificate signatories ("Dr. Sarah Mitchell", "Prof. James Chen" in
+      `components/CertificatePDF.tsx`) are real people at Cogniwise, or replace them
+
+### 7. Housekeeping
+- [ ] Create the `hello@cogniwiseai.com` mailbox or forward (landing page "Book a briefing" target)
+- [ ] Remove `<Analytics />` (Vercel Analytics) from the portal's `app/layout.tsx`: the site is not on
+      Vercel, so every page requests `/_vercel/insights/script.js` and gets a 404
+- [ ] Migrate portal and backend from Nixpacks (deprecated) to Railpack, one app at a time
+- [ ] Delete any unused domain on the backend app (Coolify shows "Validating DNS failed" on save)
+- [ ] Optional: on the landing app, set the `www` domain's Domain redirect to `https://cogniwiseai.com`
+      (verified Oct 30, 2026: `www` currently serves the page directly with a 200)
 
 ---
 
@@ -694,14 +849,14 @@ cd14a64 - Fix Prisma orderBy validation errors
 3. **Self-hosted database wins** - Supabase free tier pauses after 7 days, causing production outages. Self-hosted PostgreSQL on same VPS = no additional cost, better performance, no pausing
 
 ### Docker Networking in Coolify
-4. **Internal communication uses HTTP + IP addresses** - SSL terminates at Traefik proxy
+4. **Internal communication uses HTTP + a network alias** - SSL terminates at Traefik proxy
    - External traffic: `https://api.cogniwiseai.com` (HTTPS via Traefik)
-   - Internal traffic: `http://10.0.1.12:4000` (HTTP via Docker network)
-   - Find container IPs: `docker inspect ${CONTAINER} --format '{{.NetworkSettings.Networks.coolify.IPAddress}}'`
+   - Internal traffic: `http://cogniwise-api:4000` (HTTP via Docker network alias)
+   - Never hardcode container IPs: every redeploy creates a new container with a new IP (this broke login on Oct 30, 2026)
 
 5. **NextAuth server-side vs client-side** - Different API URLs needed
    - Client-side (browser): `NEXT_PUBLIC_API_URL=https://api.cogniwiseai.com/api`
-   - Server-side (NextAuth): `API_URL=http://10.0.1.12:4000/api`
+   - Server-side (NextAuth): `API_URL=http://cogniwise-api:4000/api`
    - Server code runs inside container, can't reach external HTTPS from inside Docker network
 
 6. **Trust proxy configuration required** - When behind Traefik/Nginx
@@ -716,12 +871,25 @@ cd14a64 - Fix Prisma orderBy validation errors
 11. **Prisma query structure** - Only apply `orderBy` to models that have the field in schema
 12. **Monorepo seed data** - Course data must be in `backend/` directory for Coolify (parent dirs not copied)
 
+### Domain Move (October 30, 2026)
+13. **Env var changes need a Redeploy** - Saving in Coolify changes nothing in the running container;
+    Redeploy (not Restart), then check with `docker exec <container> printenv VAR`
+14. **One domain, one app** - Remove a domain from the old app and redeploy it before adding it to the
+    new one; two apps claiming the same host conflict in Traefik
+15. **CORS follows the portal's address** - Backend `FRONTEND_URL` is the single allowed origin; moving
+    the portal without updating it empties every browser-side API call
+16. **Masked failures** - NextAuth `authorize()` returning `null` on a network error shows "Invalid
+    email or password"; check the portal's runtime logs for `Auth error:` before suspecting passwords
+17. **Inter-container names** - Coolify container names carry a deploy timestamp and the plain UUID
+    does not resolve; use a Network alias (Edit Networking) for anything another container calls
+
 ---
 
 ## Deployment Status
 
 **Initial Deployment:** October 26, 2026
 **Database Migration:** October 27, 2026
+**Landing Page & Domain Move:** October 30, 2026
 **Status:** 🟢 FULLY OPERATIONAL
 
 **Verified Working:**
@@ -731,7 +899,9 @@ cd14a64 - Fix Prisma orderBy validation errors
 - ✅ Session persistence
 - ✅ Course module viewing
 - ✅ Self-hosted PostgreSQL (no pausing)
-- ✅ Internal Docker networking
+- ✅ Internal Docker networking (via `cogniwise-api` alias, survives backend redeploys)
 - ✅ SSL/HTTPS on all domains
+- ✅ Landing page on cogniwiseai.com and www (Oct 30, 2026)
+- ✅ Portal on learn.cogniwiseai.com, with old cogniwiseai.com/verify links redirecting (Oct 30, 2026)
 
 **Deployed By:** Vincent Omondi with Claude Sonnet 4.5
