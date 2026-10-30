@@ -118,8 +118,8 @@ MPESA_PRODUCTION_CONSUMER_SECRET="your_actual_production_consumer_secret"
 MPESA_PRODUCTION_SHORTCODE="9334506"
 MPESA_PRODUCTION_PASSKEY="your_actual_production_passkey"
 
-# Update callback URL to your deployed backend
-MPESA_CALLBACK_URL="https://your-actual-backend.onrender.com/api/payment/callback"
+# Public URL of the production backend (Coolify). Note the singular /api/payment route.
+MPESA_CALLBACK_URL="https://api.cogniwiseai.com/api/payment/callback"
 ```
 
 ### Step 3: THE SINGLE LINE SWITCH 🔥

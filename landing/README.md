@@ -7,10 +7,13 @@ and every token, type and motion rule are in [DESIGN.md](DESIGN.md).
 ## Run
 
 ```bash
-pnpm install
-pnpm dev          # http://localhost:3000
-pnpm build && pnpm start
+npm ci
+npm run dev       # http://localhost:3000
+npm run build && npm start
 ```
+
+Stop `npm start` before rebuilding: a running server keeps serving the old build's HTML
+while `next build` replaces its assets, which makes the page load unstyled.
 
 ## Before deploying
 
@@ -37,5 +40,6 @@ The script checks that every contour ring nests inside the next one.
 
 ## Deploying
 
-The page is fully static (`○` routes only). On Vercel, set the project root to
-`landing/`. Any Node host also works with `pnpm build && pnpm start`.
+The page is fully static (`○` routes only). It runs on Coolify as its own app with base
+directory `/landing` and `npm ci` / `npm run build` / `npm run start`; see "Landing Page
+Deployment" in [PRODUCTION_DEPLOYMENT.md](../PRODUCTION_DEPLOYMENT.md).

@@ -1,6 +1,7 @@
 import NextAuth from 'next-auth';
 import type { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import { AUTH_UNAVAILABLE } from '@/lib/auth-errors';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -15,12 +16,13 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        // Server-side call to the backend over the internal Docker network
+        // (API_URL=http://cogniwise-api:4000/api in production). Browsers use NEXT_PUBLIC_API_URL.
+        const API_URL = process.env.API_URL || 'http://api.cogniwiseai.com/api';
+
+        let res: Response;
         try {
-          // Call your backend API for authentication
-          // Server-side: use HTTP (not HTTPS) to backend domain since SSL terminates at Coolify proxy
-          // Client-side: uses NEXT_PUBLIC_API_URL with HTTPS
-          const API_URL = process.env.API_URL || 'http://api.cogniwiseai.com/api';
-          const res = await fetch(`${API_URL}/auth/login`, {
+          res = await fetch(`${API_URL}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -28,24 +30,30 @@ export const authOptions: NextAuthOptions = {
               password: credentials.password,
             }),
           });
-
-          if (!res.ok) {
-            return null;
-          }
-
-          const data = await res.json();
-
-          // Return user object with token
-          return {
-            id: data.learner.id,
-            email: data.learner.email,
-            name: data.learner.name,
-            accessToken: data.token,
-          };
         } catch (error) {
-          console.error('Auth error:', error);
+          // Backend unreachable: report it as an outage, not as bad credentials
+          console.error(`Auth error: backend unreachable at ${API_URL}:`, error);
+          throw new Error(AUTH_UNAVAILABLE);
+        }
+
+        if (res.status >= 500) {
+          console.error(`Auth error: backend returned ${res.status} from ${API_URL}/auth/login`);
+          throw new Error(AUTH_UNAVAILABLE);
+        }
+
+        if (!res.ok) {
           return null;
         }
+
+        const data = await res.json();
+
+        // Return user object with token
+        return {
+          id: data.learner.id,
+          email: data.learner.email,
+          name: data.learner.name,
+          accessToken: data.token,
+        };
       },
     }),
   ],

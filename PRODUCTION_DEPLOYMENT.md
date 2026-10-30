@@ -127,7 +127,7 @@ MPESA_PRODUCTION_SHORTCODE=${YOUR_TILL_NUMBER}
 MPESA_PRODUCTION_PASSKEY=${YOUR_PRODUCTION_PASSKEY}
 
 # Payment Settings
-MPESA_CALLBACK_URL=https://api.cogniwiseai.com/api/payments/callback
+MPESA_CALLBACK_URL=https://api.cogniwiseai.com/api/payment/callback   # singular "payment"
 CERTIFICATE_PRICE=500
 ```
 
@@ -143,7 +143,9 @@ CERTIFICATE_PRICE=500
   production mode refuses to start without it:
   `docker exec <backend> sh -c 'test -n "$JWT_SECRET" && echo set || echo MISSING'`
 - `MPESA_CALLBACK_URL` must stay the public `api.` URL (Safaricom calls it from the internet). Never
-  use the internal `cogniwise-api` alias there
+  use the internal `cogniwise-api` alias there. The route is **`/api/payment/callback`** (singular,
+  mounted in `backend/src/index.ts`). Until Oct 30, 2026 this document said `/api/payments/callback`,
+  which returns 404, so check the value actually set in Coolify
 - `DATABASE_URL` uses container name (found via `docker ps` on server)
 - All secrets stored in Coolify dashboard, NOT committed to git
 - Set separately for Production and Preview environments
@@ -642,7 +644,7 @@ Internal Docker Communication:
 
 ### Stack
 **Frontend:**
-- Next.js 16.2.6
+- Next.js 16.4.3 (upgraded from 16.2.6 on Oct 30, 2026)
 - React 19
 - TypeScript 5.7.3
 - Tailwind CSS 4.2.0
@@ -775,7 +777,8 @@ The `cogniwise-api` alias and the env var changes were made in Coolify, not in g
 ## Next Steps (Remaining Tasks)
 
 ### 1. M-Pesa Production Configuration
-- [ ] Update Daraja Portal callback URL to: `https://api.cogniwiseai.com/api/payments/callback`
+- [ ] Update Daraja Portal callback URL to: `https://api.cogniwiseai.com/api/payment/callback`
+- [ ] Check the backend's `MPESA_CALLBACK_URL` in Coolify uses `/api/payment/` (singular), not `/api/payments/`
 - [ ] Switch to production credentials in Coolify:
   ```env
   MPESA_ENVIRONMENT=production
@@ -803,13 +806,13 @@ The `cogniwise-api` alias and the env var changes were made in Coolify, not in g
 - [ ] Database performance monitoring
 
 ### 4. Security Hardening
-- [ ] **Upgrade the portal's Next.js from 16.2.6 to >= 16.4.3.** 16.2.x has published critical
-      advisories, including unauthenticated remote code execution in the Image Optimization API
-      (enabled in the portal's `next.config.mjs`). The landing page is already on 16.4.3
+- [x] **Upgrade the portal's Next.js from 16.2.6 to 16.4.3** (Oct 30, 2026). 16.2.x has published
+      critical advisories, including unauthenticated remote code execution in the Image
+      Optimization API, which the portal enables
 - [ ] Set backend `NODE_ENV=production` after confirming `JWT_SECRET` is set (see Backend notes)
 - [ ] Set backend `APP_URL=https://learn.cogniwiseai.com`
-- [ ] Make login report "service unavailable" instead of "Invalid email or password" when the
-      backend is unreachable (`authorize()` in `app/api/auth/[...nextauth]/route.ts` hides it)
+- [x] Login reports "Sign-in is temporarily unavailable" instead of "Invalid email or password"
+      when the backend is unreachable or returns 5xx (Oct 30, 2026)
 - [ ] Enable SSH key-only authentication (disable password auth)
 - [ ] Configure UFW firewall (allow only 22, 80, 443, 8000)
 - [ ] Install fail2ban for SSH protection
@@ -832,8 +835,8 @@ The `cogniwise-api` alias and the env var changes were made in Coolify, not in g
 
 ### 7. Housekeeping
 - [ ] Create the `hello@cogniwiseai.com` mailbox or forward (landing page "Book a briefing" target)
-- [ ] Remove `<Analytics />` (Vercel Analytics) from the portal's `app/layout.tsx`: the site is not on
-      Vercel, so every page requests `/_vercel/insights/script.js` and gets a 404
+- [x] Removed Vercel and Render remnants (Oct 30, 2026): `@vercel/analytics` and its 404ing
+      script, the backend's unused `@vercel/speed-insights`, `vercel.json`, `render.yaml`
 - [ ] Migrate portal and backend from Nixpacks (deprecated) to Railpack, one app at a time
 - [ ] Delete any unused domain on the backend app (Coolify shows "Validating DNS failed" on save)
 - [ ] Optional: on the landing app, set the `www` domain's Domain redirect to `https://cogniwiseai.com`
@@ -878,8 +881,9 @@ The `cogniwise-api` alias and the env var changes were made in Coolify, not in g
     new one; two apps claiming the same host conflict in Traefik
 15. **CORS follows the portal's address** - Backend `FRONTEND_URL` is the single allowed origin; moving
     the portal without updating it empties every browser-side API call
-16. **Masked failures** - NextAuth `authorize()` returning `null` on a network error shows "Invalid
-    email or password"; check the portal's runtime logs for `Auth error:` before suspecting passwords
+16. **Masked failures** - NextAuth `authorize()` used to return `null` on a network error, which shows
+    "Invalid email or password". It now throws `ServiceUnavailable` and the login page says sign-in is
+    temporarily unavailable; the portal's runtime logs still show `Auth error: backend unreachable at ...`
 17. **Inter-container names** - Coolify container names carry a deploy timestamp and the plain UUID
     does not resolve; use a Network alias (Edit Networking) for anything another container calls
 

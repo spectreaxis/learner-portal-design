@@ -309,7 +309,6 @@ Once Phase 4 is complete:
 - Move to Phase 5: Production Optimization & Monitoring
   - Add error boundaries
   - Setup Sentry monitoring
-  - Add @vercel/speed-insights
   - Configure production logging
 
 - Then Phase 6: Scalability Infrastructure

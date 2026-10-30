@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Mail, Lock, User, AlertCircle, Loader2, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { BrandMark } from '@/components/brand-mark';
+import { AUTH_UNAVAILABLE } from '@/lib/auth-errors';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -60,7 +61,11 @@ export default function RegisterPage() {
       });
 
       if (result?.error) {
-        setError('Registration successful but sign in failed. Please try signing in manually.');
+        setError(
+          result.error === AUTH_UNAVAILABLE
+            ? 'Your account was created, but sign-in is temporarily unavailable. Please sign in again in a moment.'
+            : 'Registration successful but sign in failed. Please try signing in manually.'
+        );
         setLoading(false);
         return;
       }

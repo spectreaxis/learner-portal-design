@@ -56,7 +56,6 @@ learner-portal-design/
 'use client';
 
 import { Geist, Geist_Mono } from 'next/font/google';
-import { Analytics } from '@vercel/analytics/next';
 import { Sidebar } from '@/components/sidebar';
 import './globals.css';
 
@@ -75,7 +74,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </main>
         </div>
-        {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
   );
@@ -1536,25 +1534,7 @@ export default function Error({
 
 ```bash
 cd frontend
-pnpm add @vercel/speed-insights @sentry/nextjs
-```
-
-**File**: `frontend/app/layout.tsx` (update)
-
-```typescript
-import { SpeedInsights } from '@vercel/speed-insights/next';
-
-export default function RootLayout({ children }) {
-  return (
-    <html>
-      <body>
-        {children}
-        <Analytics />
-        <SpeedInsights />
-      </body>
-    </html>
-  );
-}
+pnpm add @sentry/nextjs
 ```
 
 **File**: `frontend/sentry.client.config.ts`
@@ -1970,8 +1950,8 @@ test('sidebar state persists across navigation', async ({ page }) => {
 
 ## Cost Estimate (1000+ Concurrent Users)
 
-**Cloud Infrastructure** (Vercel + Managed Services):
-- Frontend (Vercel Pro): $20/mo
+**Managed Services**:
+- Frontend hosting (managed Node platform): $20/mo
 - Bandwidth (~10TB): $50-100/mo
 - Database (Neon/Supabase Pro): $25-50/mo
 - Redis (Upstash): $10-20/mo

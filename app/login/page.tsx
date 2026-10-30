@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Mail, Lock, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
 import { BrandMark } from '@/components/brand-mark';
+import { AUTH_UNAVAILABLE } from '@/lib/auth-errors';
 
 // callbackUrl may be absolute (set by the auth proxy); accept it only if it points at this origin
 function getSafeCallbackPath(): string {
@@ -41,7 +42,11 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError('Invalid email or password');
+        setError(
+          result.error === AUTH_UNAVAILABLE
+            ? 'Sign-in is temporarily unavailable. Please try again in a moment.'
+            : 'Invalid email or password'
+        );
         setLoading(false);
         return;
       }
