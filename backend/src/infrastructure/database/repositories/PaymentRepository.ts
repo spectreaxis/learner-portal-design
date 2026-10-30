@@ -1,27 +1,28 @@
 import { BaseRepository } from './BaseRepository';
 import { IDataProvider } from '../../../core/interfaces/IDataProvider';
 
+export type PaymentStatus = 'PENDING' | 'SUCCEEDED' | 'FAILED';
+
 export interface Payment {
   id: string;
   learnerId: string;
   certificateId: string;
-  amount: number;
-  phoneNumber: string;
-  merchantRequestId: string;
-  checkoutRequestId: string;
-  mpesaReceiptNumber: string | null;
-  transactionDate: Date | null;
-  status: string;
-  resultCode: string | null;
-  resultDesc: string | null;
-  metadata: any; // JSON
+  provider: string;
+  reference: string;
+  accessCode: string | null;
+  amountMinor: number;
+  currency: string;
+  status: PaymentStatus;
+  channel: string | null;
+  failureReason: string | null;
+  paidAt: Date | null;
   createdAt: Date;
 }
 
 /**
  * Payment Repository
  *
- * Handles all database operations related to M-Pesa payments.
+ * One record per payment attempt; a certificate is paid once any attempt succeeds.
  */
 
 export class PaymentRepository extends BaseRepository<Payment> {
@@ -29,58 +30,32 @@ export class PaymentRepository extends BaseRepository<Payment> {
     super('payment', dataProvider);
   }
 
-  async findByCertificateId(certificateId: string): Promise<Payment | null> {
-    return this.dataProvider.findUnique<Payment>(this.model, { certificateId });
+  async findByReference(reference: string): Promise<Payment | null> {
+    return this.dataProvider.findUnique<Payment>(this.model, { reference });
   }
 
-  async findByCheckoutRequestId(checkoutRequestId: string): Promise<Payment | null> {
-    return this.dataProvider.findUnique<Payment>(this.model, { checkoutRequestId });
-  }
-
-  async upsertPayment(
-    certificateId: string,
-    data: {
-      learnerId: string;
-      amount: number;
-      phoneNumber: string;
-      merchantRequestId: string;
-      checkoutRequestId: string;
-      status: string;
-      metadata?: any;
-    }
-  ): Promise<Payment> {
-    return this.dataProvider.upsert<Payment>(
-      this.model,
-      { certificateId },
-      {
-        ...data,
-        certificateId,
-        createdAt: new Date(),
-      },
-      {
-        ...data,
-      }
-    );
-  }
-
-  async updatePaymentStatus(
-    paymentId: string,
-    data: {
-      status: string;
-      mpesaReceiptNumber?: string;
-      transactionDate?: Date;
-      resultCode?: string;
-      resultDesc?: string;
-      metadata?: any;
-    }
-  ): Promise<Payment> {
-    return this.dataProvider.update<Payment>(this.model, { id: paymentId }, data);
-  }
-
-  async findByLearner(learnerId: string): Promise<Payment[]> {
+  async findByCertificate(certificateId: string): Promise<Payment[]> {
     return this.dataProvider.findMany<Payment>(this.model, {
-      where: { learnerId },
+      where: { certificateId },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  async countSucceeded(certificateId: string): Promise<number> {
+    return this.dataProvider.count(this.model, { certificateId, status: 'SUCCEEDED' });
+  }
+
+  /**
+   * Record a verified outcome. A succeeded payment is final, so this is a no-op
+   * once one exists, which also makes webhook retries and races harmless.
+   * @returns Whether the payment was updated
+   */
+  async recordOutcome(reference: string, data: Record<string, any>): Promise<boolean> {
+    const updated = await this.dataProvider.updateMany(
+      this.model,
+      { reference, status: { not: 'SUCCEEDED' } },
+      data
+    );
+    return updated > 0;
   }
 }

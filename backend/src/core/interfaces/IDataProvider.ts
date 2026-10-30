@@ -77,6 +77,19 @@ export interface IDataProvider {
   ): Promise<T>;
 
   /**
+   * Update all records matching a where clause
+   * @param model - Model name
+   * @param where - Where clause
+   * @param data - Update data
+   * @returns Number of updated records
+   */
+  updateMany(
+    model: string,
+    where: Record<string, any>,
+    data: Record<string, any>
+  ): Promise<number>;
+
+  /**
    * Upsert (create or update) a record
    * @param model - Model name
    * @param where - Where clause

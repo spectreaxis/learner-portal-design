@@ -1,358 +1,79 @@
-import express, { Request, Response } from 'express';
-import mpesaService from '../services/mpesa.service';
+import express, { Response } from 'express';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 import { ProviderFactory } from '../config/providers.config';
+import { PaymentService } from '../application/services/PaymentService';
 import { PaymentRepository } from '../infrastructure/database/repositories/PaymentRepository';
 import { CertificateRepository } from '../infrastructure/database/repositories/CertificateRepository';
-import { AppError, NotFoundError, ForbiddenError } from '../core/errors/AppError';
+import { LearnerRepository } from '../infrastructure/database/repositories/LearnerRepository';
+import { AppError } from '../core/errors/AppError';
 
 const router = express.Router();
 
-// Initialize data provider and repositories
 const dataProvider = ProviderFactory.getDataProvider();
-const paymentRepo = new PaymentRepository(dataProvider);
-const certificateRepo = new CertificateRepository(dataProvider);
+const paymentService = new PaymentService(
+  new PaymentRepository(dataProvider),
+  new CertificateRepository(dataProvider),
+  new LearnerRepository(dataProvider),
+  (name) => ProviderFactory.getPaymentProvider(name)
+);
 
-const CERTIFICATE_PRICE = parseFloat(process.env.CERTIFICATE_PRICE || '646.80');
-
-/**
- * POST /api/payment/initiate
- * Initiate certificate payment via M-Pesa STK Push
- */
-router.post('/initiate', authenticate, async (req: AuthRequest, res: Response) => {
-  try {
-    const { certificateId, phoneNumber } = req.body;
-    const learnerId = req.userId!;
-
-    // Validation
-    if (!certificateId || !phoneNumber) {
-      return res.status(400).json({
-        success: false,
-        message: 'Certificate ID and phone number are required',
-      });
-    }
-
-    // Check if certificate exists
-    const certificate: any = await dataProvider.findById('certificate', certificateId, {
-      include: { learner: true, module: true },
-    });
-
-    if (!certificate) {
-      return res.status(404).json({
-        success: false,
-        message: 'Certificate not found',
-      });
-    }
-
-    // Verify certificate belongs to the requesting learner
-    if (certificate.learnerId !== learnerId) {
-      return res.status(403).json({
-        success: false,
-        message: 'You do not own this certificate',
-      });
-    }
-
-    // Check if payment already exists
-    const existingPayment = await paymentRepo.findByCertificateId(certificateId);
-
-    if (existingPayment && existingPayment.status === 'COMPLETED') {
-      return res.status(400).json({
-        success: false,
-        message: 'Certificate already paid for',
-      });
-    }
-
-    // Initiate STK Push
-    const stkResponse = await mpesaService.initiateSTKPush({
-      phoneNumber,
-      amount: CERTIFICATE_PRICE,
-      accountReference: certificate.certificateId,
-      transactionDesc: `Certificate - ${certificate.module.title}`,
-    });
-
-    // Create or update payment record
-    const payment = await paymentRepo.upsertPayment(certificateId, {
-      learnerId,
-      amount: CERTIFICATE_PRICE,
-      phoneNumber,
-      merchantRequestId: stkResponse.MerchantRequestID,
-      checkoutRequestId: stkResponse.CheckoutRequestID,
-      status: 'PENDING',
-      metadata: {
-        moduleName: certificate.module.title,
-        initiatedAt: new Date().toISOString(),
-      },
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: 'STK Push initiated. Please enter your M-Pesa PIN on your phone.',
-      data: {
-        paymentId: payment.id,
-        checkoutRequestId: payment.checkoutRequestId,
-        amount: CERTIFICATE_PRICE,
-        customerMessage: stkResponse.CustomerMessage,
-      },
-    });
-  } catch (error: any) {
-    console.error('❌ Payment initiation error:', error);
-
-    if (error instanceof AppError) {
-      return res.status(error.statusCode).json({
-        success: false,
-        message: error.message,
-      });
-    }
-
-    return res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to initiate payment',
-    });
+function sendError(res: Response, error: any, fallback: string) {
+  if (error instanceof AppError) {
+    return res.status(error.statusCode).json({ error: error.message });
   }
-});
-
-/**
- * Parse M-Pesa date format (YYYYMMDDHHmmss) to JavaScript Date
- */
-function parseMpesaDate(dateString: string | number): Date | undefined {
-  if (!dateString) return undefined;
-
-  const str = String(dateString);
-  if (str.length !== 14) return undefined;
-
-  const year = str.substring(0, 4);
-  const month = str.substring(4, 6);
-  const day = str.substring(6, 8);
-  const hour = str.substring(8, 10);
-  const minute = str.substring(10, 12);
-  const second = str.substring(12, 14);
-
-  return new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}Z`);
+  console.error(`${fallback}:`, error.message);
+  res.status(500).json({ error: fallback });
 }
 
-/**
- * POST /api/payment/callback
- * M-Pesa callback handler (receives payment confirmation)
- */
-router.post('/callback', async (req: Request, res: Response) => {
+router.use(authenticate);
+
+// Price and paid status of a certificate (reconciles unfinished payments)
+router.get('/certificates/:certificateId', async (req: AuthRequest, res) => {
   try {
-    console.log('📥 M-Pesa Callback received:', JSON.stringify(req.body, null, 2));
-
-    const { Body } = req.body;
-
-    if (!Body || !Body.stkCallback) {
-      console.log('⚠️ Invalid callback format');
-      return res.status(200).json({ ResultCode: 0, ResultDesc: 'Success' });
-    }
-
-    const { MerchantRequestID, CheckoutRequestID, ResultCode, ResultDesc, CallbackMetadata } =
-      Body.stkCallback;
-
-    // Find payment record
-    const payment = await paymentRepo.findByCheckoutRequestId(CheckoutRequestID);
-
-    if (!payment) {
-      console.log('⚠️ Payment not found for CheckoutRequestID:', CheckoutRequestID);
-      return res.status(200).json({ ResultCode: 0, ResultDesc: 'Success' });
-    }
-
-    // ResultCode 0 = Success, anything else = failure
-    if (ResultCode === 0) {
-      // Extract payment details from callback metadata
-      const metadata = CallbackMetadata?.Item || [];
-      const mpesaReceipt = metadata.find(
-        (item: any) => item.Name === 'MpesaReceiptNumber'
-      )?.Value;
-      const transactionDate = metadata.find(
-        (item: any) => item.Name === 'TransactionDate'
-      )?.Value;
-      const phoneNumber = metadata.find((item: any) => item.Name === 'PhoneNumber')?.Value;
-      const amount = metadata.find((item: any) => item.Name === 'Amount')?.Value;
-
-      // Update payment as COMPLETED
-      await paymentRepo.updatePaymentStatus(payment.id, {
-        status: 'COMPLETED',
-        mpesaReceiptNumber: mpesaReceipt,
-        transactionDate: parseMpesaDate(transactionDate),
-        resultCode: String(ResultCode),
-        resultDesc: ResultDesc,
-        metadata: {
-          ...(payment.metadata as any),
-          callbackReceivedAt: new Date().toISOString(),
-          mpesaReceipt,
-          phoneNumber,
-          amount,
-        },
-      });
-
-      console.log('✅ Payment completed successfully:', mpesaReceipt);
-    } else {
-      // Payment failed or cancelled
-      await paymentRepo.updatePaymentStatus(payment.id, {
-        status: ResultCode === 1032 ? 'CANCELLED' : 'FAILED',
-        resultCode: String(ResultCode),
-        resultDesc: ResultDesc,
-        metadata: {
-          ...(payment.metadata as any),
-          callbackReceivedAt: new Date().toISOString(),
-        },
-      });
-
-      console.log(`❌ Payment failed: ${ResultDesc} (Code: ${ResultCode})`);
-    }
-
-    // Acknowledge callback
-    return res.status(200).json({ ResultCode: 0, ResultDesc: 'Success' });
+    res.setHeader('Cache-Control', 'no-store');
+    res.json(await paymentService.getCertificatePayment(req.userId!, req.params.certificateId as string));
   } catch (error: any) {
-    console.error('❌ Callback processing error:', error);
-    return res.status(200).json({ ResultCode: 0, ResultDesc: 'Success' });
+    sendError(res, error, 'Failed to load payment details');
   }
 });
 
-/**
- * GET /api/payment/status/:checkoutRequestId
- * Check payment status
- */
-router.get(
-  '/status/:checkoutRequestId',
-  authenticate,
-  async (req: AuthRequest, res: Response) => {
-    try {
-      const checkoutRequestId = req.params.checkoutRequestId as string;
-      const learnerId = req.userId!;
-
-      const payment: any = await dataProvider.findUnique('payment', { checkoutRequestId }, {
-        include: {
-          certificate: {
-            include: {
-              module: true,
-            },
-          },
-        },
-      });
-
-      if (!payment) {
-        return res.status(404).json({
-          success: false,
-          message: 'Payment not found',
-        });
-      }
-
-      // Verify payment belongs to the requesting learner
-      if (payment.learnerId !== learnerId) {
-        return res.status(403).json({
-          success: false,
-          message: 'Unauthorized',
-        });
-      }
-
-      // If still pending after 60 seconds, query M-Pesa API for status
-      const ageInSeconds = (Date.now() - payment.createdAt.getTime()) / 1000;
-      if (payment.status === 'PENDING' && ageInSeconds > 60) {
-        try {
-          const stkStatus = await mpesaService.querySTKPushStatus(checkoutRequestId);
-
-          if (stkStatus.ResultCode === '0') {
-            // Payment was successful but callback might have failed
-            await paymentRepo.updatePaymentStatus(payment.id, {
-              status: 'COMPLETED',
-              resultCode: '0',
-              resultDesc: 'Success',
-            });
-            payment.status = 'COMPLETED';
-          }
-        } catch (error) {
-          console.error('Error querying STK status:', error);
-        }
-      }
-
-      return res.status(200).json({
-        success: true,
-        data: {
-          paymentId: payment.id,
-          status: payment.status,
-          amount: payment.amount,
-          mpesaReceipt: payment.mpesaReceiptNumber,
-          transactionDate: payment.transactionDate,
-          certificate: {
-            id: payment.certificate.id,
-            certificateId: payment.certificate.certificateId,
-            moduleName: payment.certificate.module.title,
-          },
-        },
-      });
-    } catch (error: any) {
-      console.error('❌ Status check error:', error);
-
-      if (error instanceof AppError) {
-        return res.status(error.statusCode).json({
-          success: false,
-          message: error.message,
-        });
-      }
-
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to check payment status',
-      });
-    }
+// Start (or resume) paying for a certificate; the amount is always set here
+router.post('/certificates/:certificateId', async (req: AuthRequest, res) => {
+  try {
+    res.json(await paymentService.startCertificatePayment(req.userId!, req.params.certificateId as string));
+  } catch (error: any) {
+    sendError(res, error, 'Failed to start payment');
   }
-);
+});
 
-/**
- * GET /api/payment/certificate/:certificateId
- * Check if certificate is paid for
- */
-router.get(
-  '/certificate/:certificateId',
-  authenticate,
-  async (req: AuthRequest, res: Response) => {
-    try {
-      const certificateId = req.params.certificateId as string;
-      const learnerId = req.userId!;
-
-      const payment = await paymentRepo.findByCertificateId(certificateId);
-
-      if (!payment) {
-        return res.status(200).json({
-          success: true,
-          data: { isPaid: false },
-        });
-      }
-
-      // Verify payment belongs to the requesting learner
-      if (payment.learnerId !== learnerId) {
-        return res.status(403).json({
-          success: false,
-          message: 'Unauthorized',
-        });
-      }
-
-      return res.status(200).json({
-        success: true,
-        data: {
-          isPaid: payment.status === 'COMPLETED',
-          status: payment.status,
-          amount: payment.amount,
-          mpesaReceipt: payment.mpesaReceiptNumber,
-        },
-      });
-    } catch (error: any) {
-      console.error('❌ Certificate payment check error:', error);
-
-      if (error instanceof AppError) {
-        return res.status(error.statusCode).json({
-          success: false,
-          message: error.message,
-        });
-      }
-
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to check payment status',
-      });
-    }
+router.get('/:reference', async (req: AuthRequest, res) => {
+  try {
+    res.setHeader('Cache-Control', 'no-store');
+    res.json(await paymentService.getPaymentStatus(req.userId!, req.params.reference as string));
+  } catch (error: any) {
+    sendError(res, error, 'Failed to check payment status');
   }
-);
+});
 
+// Provider webhooks need the raw body for signature checks, so this router is
+// mounted before the JSON body parser and the rate limiter
+const webhookRouter = express.Router();
+
+webhookRouter.post('/:provider', express.raw({ type: '*/*', limit: '100kb' }), async (req, res) => {
+  try {
+    // The body is absent (not a Buffer) when a request carries none
+    const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+    await paymentService.handleWebhook(req.params.provider as string, rawBody, req.headers);
+    res.sendStatus(200);
+  } catch (error: any) {
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+    // Anything else is ours to fix; a non-2xx makes the provider retry later
+    console.error('Webhook processing failed:', error.message);
+    res.sendStatus(500);
+  }
+});
+
+export { webhookRouter };
 export default router;

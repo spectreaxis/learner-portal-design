@@ -1,20 +1,19 @@
+// Load .env before any module reads process.env at import time
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
-import dotenv from 'dotenv';
 
 import authRoutes from './routes/auth.routes';
 import moduleRoutes from './routes/module.routes';
 import learnerRoutes, { certificateRouter } from './routes/learner.routes';
-import paymentRoutes from './routes/payment.routes';
+import paymentRoutes, { webhookRouter } from './routes/payment.routes';
 import { errorHandler } from './middleware/error.middleware';
 import { rateLimiter } from './middleware/rate-limit.middleware';
 import { prismaClient, disconnectPrisma } from './infrastructure/prisma/client';
 import { ProviderFactory } from './config/providers.config';
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -30,15 +29,19 @@ app.use(cors({
   credentials: true,
 }));
 
-// Body parsing
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
 // Compression
 app.use(compression());
 
 // Logging
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+
+// Payment webhooks read the raw body and come from a few provider IPs, so they
+// sit before body parsing and the rate limiter
+app.use('/api/payments/webhooks', webhookRouter);
+
+// Body parsing
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Rate limiting
 app.use('/api', rateLimiter);
@@ -50,7 +53,7 @@ app.use('/api/modules', moduleRoutes);
 // whose authenticate middleware would otherwise reject it
 app.use('/api/learner', certificateRouter);
 app.use('/api/learner', learnerRoutes);
-app.use('/api/payment', paymentRoutes); // M-Pesa payment routes
+app.use('/api/payments', paymentRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -61,10 +64,16 @@ app.get('/health', (req, res) => {
     providers: {
       auth: config.auth,
       data: config.data,
+      payment: config.payment,
     },
     environment: process.env.NODE_ENV || 'development',
   });
 });
+
+// Fail fast on a missing payment key rather than at a learner's first payment
+if (process.env.NODE_ENV === 'production') {
+  ProviderFactory.getPaymentProvider();
+}
 
 // Error handling
 app.use(errorHandler);

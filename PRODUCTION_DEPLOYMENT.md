@@ -113,22 +113,11 @@ FRONTEND_URL=https://learn.cogniwiseai.com   # CORS: the only origin allowed; mu
 PORT=4000
 NODE_ENV=production                          # see note: production reported "development" on Oct 30
 
-# M-Pesa Configuration
-MPESA_ENVIRONMENT=sandbox
-MPESA_SANDBOX_CONSUMER_KEY=${YOUR_SANDBOX_KEY}
-MPESA_SANDBOX_CONSUMER_SECRET=${YOUR_SANDBOX_SECRET}
-MPESA_SANDBOX_SHORTCODE=174379
-MPESA_SANDBOX_PASSKEY=${YOUR_SANDBOX_PASSKEY}
-
-# M-Pesa Production (fill when going live)
-MPESA_PRODUCTION_CONSUMER_KEY=${YOUR_PRODUCTION_KEY}
-MPESA_PRODUCTION_CONSUMER_SECRET=${YOUR_PRODUCTION_SECRET}
-MPESA_PRODUCTION_SHORTCODE=${YOUR_TILL_NUMBER}
-MPESA_PRODUCTION_PASSKEY=${YOUR_PRODUCTION_PASSKEY}
-
-# Payment Settings
-MPESA_CALLBACK_URL=https://api.cogniwiseai.com/api/payment/callback   # singular "payment"
-CERTIFICATE_PRICE=500
+# Payments (Paystack: M-Pesa, card, Pesalink)
+PAYMENT_PROVIDER=paystack
+PAYSTACK_SECRET_KEY=${SK_LIVE_KEY}            # sk_live_... ; the server logs a warning if a test key is used
+CERTIFICATE_PRICE=5.00
+CERTIFICATE_PRICE_CURRENCY=USD               # learners pay the KES equivalent at the day's rate
 ```
 
 **Important Notes:**
@@ -142,10 +131,12 @@ CERTIFICATE_PRICE=500
   `default-secret-change-in-production`. Confirm `JWT_SECRET` is set *before* switching, because
   production mode refuses to start without it:
   `docker exec <backend> sh -c 'test -n "$JWT_SECRET" && echo set || echo MISSING'`
-- `MPESA_CALLBACK_URL` must stay the public `api.` URL (Safaricom calls it from the internet). Never
-  use the internal `cogniwise-api` alias there. The route is **`/api/payment/callback`** (singular,
-  mounted in `backend/src/index.ts`). Until Oct 30, 2026 this document said `/api/payments/callback`,
-  which returns 404, so check the value actually set in Coolify
+- Paystack dashboard → Settings → API Keys & Webhooks → **Live Webhook URL** must be
+  `https://api.cogniwiseai.com/api/payments/webhooks/paystack` (the public `api.` URL, never the
+  internal `cogniwise-api` alias). The Live Callback URL can stay empty: checkout runs in a popup
+  on the portal, so Paystack never redirects learners
+- Payments need outbound HTTPS from the backend to `api.paystack.co` and `open.er-api.com`
+  (daily USD→KES rate)
 - `DATABASE_URL` uses container name (found via `docker ps` on server)
 - All secrets stored in Coolify dashboard, NOT committed to git
 - Set separately for Production and Preview environments
@@ -591,7 +582,7 @@ Applied via Prisma migrations (`backend/prisma/migrations/`):
 - **Activity** - Hands-on exercises
 - **Certification** - Final module assessments
 - **Certificate** - Earned certificates
-- **Payment** - M-Pesa payment transactions
+- **Payment** - Certificate payment attempts (Paystack), one row per attempt
 
 ### Database Backup Strategy
 - **Coolify Built-in:** Automatic container snapshots
@@ -776,19 +767,34 @@ The `cogniwise-api` alias and the env var changes were made in Coolify, not in g
 
 ## Next Steps (Remaining Tasks)
 
-### 1. M-Pesa Production Configuration
-- [ ] Update Daraja Portal callback URL to: `https://api.cogniwiseai.com/api/payment/callback`
-- [ ] Check the backend's `MPESA_CALLBACK_URL` in Coolify uses `/api/payment/` (singular), not `/api/payments/`
-- [ ] Switch to production credentials in Coolify:
-  ```env
-  MPESA_ENVIRONMENT=production
-  MPESA_PRODUCTION_CONSUMER_KEY=${YOUR_KEY}
-  MPESA_PRODUCTION_CONSUMER_SECRET=${YOUR_SECRET}
-  MPESA_PRODUCTION_SHORTCODE=${YOUR_TILL}
-  MPESA_PRODUCTION_PASSKEY=${YOUR_PASSKEY}
-  ```
-- [ ] Test payment flow in production
-- [ ] Update certificate price if needed (currently KES 500)
+### 1. Paystack Go-Live (in this order)
+The backend refuses to start in production without `PAYSTACK_SECRET_KEY`, and migrations are run
+by hand, so the order matters.
+
+1. [ ] **Paystack dashboard** (Live mode) → Settings → API Keys & Webhooks: set the Live Webhook URL
+   to `https://api.cogniwiseai.com/api/payments/webhooks/paystack` and save. Leave the Live Callback
+   URL empty. Optionally add the business logo under Preferences
+2. [ ] **Coolify, backend env:** delete every `MPESA_*` variable and the old `CERTIFICATE_PRICE=500`,
+   then add `PAYMENT_PROVIDER=paystack`, `PAYSTACK_SECRET_KEY=sk_live_...`, `CERTIFICATE_PRICE=5.00`,
+   `CERTIFICATE_PRICE_CURRENCY=USD`. Do not redeploy yet. The frontend needs no new variables
+3. [ ] **Deploy:** merge `feat/paystack-payments` into `main`, then
+   `git push origin main && git push vincent main`. Coolify builds both apps
+4. [ ] **Migrate** as soon as the backend is up. Until then payment and verify requests fail:
+   ```bash
+   ssh root@${VPS_IP}
+   docker exec -it ${BACKEND_CONTAINER} npx prisma migrate deploy
+   ```
+   This replaces the old sandbox `Payment` table (`20261030153848_paystack_payments`)
+5. [ ] **Check:** `curl https://api.cogniwiseai.com/health` shows `"payment":"paystack"`, and the
+   backend logs show no `TEST secret key` warning
+6. [ ] **Smoke test with real money:** temporarily set `CERTIFICATE_PRICE=10` and
+   `CERTIFICATE_PRICE_CURRENCY=KES` (Coolify restart), pay for one certificate with M-Pesa, confirm it
+   unlocks, that `/verify/<id>` works and that Paystack's dashboard shows the webhook delivered
+   (Transactions → the payment → webhook log). Refund it from the dashboard, then restore the USD price
+7. [ ] Ask Paystack support to enable Pesalink if it is not listed at checkout
+
+**Rollback:** redeploy the previous commit in Coolify. The old code never used the new `Payment`
+table, so no database rollback is needed.
 
 ### 2. Database Backup Automation
 - [ ] Set up automated daily backups

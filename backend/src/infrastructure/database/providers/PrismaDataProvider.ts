@@ -59,6 +59,16 @@ export class PrismaDataProvider implements IDataProvider {
     return (await prismaModel.update({ where, data })) as T;
   }
 
+  async updateMany(
+    model: string,
+    where: Record<string, any>,
+    data: Record<string, any>
+  ): Promise<number> {
+    const prismaModel = this.getPrismaModel(model);
+    const { count } = await prismaModel.updateMany({ where, data });
+    return count;
+  }
+
   async upsert<T>(
     model: string,
     where: Record<string, any>,

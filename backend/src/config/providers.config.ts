@@ -1,9 +1,12 @@
 import { IAuthProvider } from '../core/interfaces/IAuthProvider';
 import { IDataProvider } from '../core/interfaces/IDataProvider';
+import { IPaymentProvider } from '../core/interfaces/IPaymentProvider';
 import { JWTAuthProvider } from '../infrastructure/auth/providers/JWTAuthProvider';
 import { PrismaDataProvider } from '../infrastructure/database/providers/PrismaDataProvider';
+import { PaystackProvider } from '../infrastructure/payments/PaystackProvider';
 import { prismaClient } from '../infrastructure/prisma/client';
 import { LearnerRepository } from '../infrastructure/database/repositories/LearnerRepository';
+import { NotFoundError } from '../core/errors/AppError';
 
 /**
  * Provider Factory
@@ -15,20 +18,24 @@ import { LearnerRepository } from '../infrastructure/database/repositories/Learn
 
 export type AuthProviderType = 'jwt' | 'supabase';
 export type DataProviderType = 'prisma' | 'supabase';
+export type PaymentProviderType = 'paystack';
 
 export interface ProviderConfig {
   auth: AuthProviderType;
   data: DataProviderType;
+  payment: PaymentProviderType;
 }
 
 export class ProviderFactory {
   private static config: ProviderConfig = {
     auth: (process.env.AUTH_PROVIDER as AuthProviderType) || 'jwt',
     data: (process.env.DATA_PROVIDER as DataProviderType) || 'prisma',
+    payment: (process.env.PAYMENT_PROVIDER as PaymentProviderType) || 'paystack',
   };
 
   private static dataProviderInstance: IDataProvider | null = null;
   private static authProviderInstance: IAuthProvider | null = null;
+  private static paymentProviderInstances = new Map<string, IPaymentProvider>();
 
   /**
    * Get data provider instance (singleton)
@@ -104,6 +111,34 @@ export class ProviderFactory {
   }
 
   /**
+   * Get a payment provider instance (singleton per provider)
+   * @param name - Provider that owns an existing payment; defaults to PAYMENT_PROVIDER for new ones
+   * @returns IPaymentProvider instance
+   */
+  static getPaymentProvider(name: string = this.config.payment): IPaymentProvider {
+    let provider = this.paymentProviderInstances.get(name);
+    if (!provider) {
+      switch (name) {
+        case 'paystack': {
+          const secretKey = process.env.PAYSTACK_SECRET_KEY;
+          if (!secretKey) {
+            throw new Error('PAYSTACK_SECRET_KEY environment variable is required for Paystack payments');
+          }
+          if (process.env.NODE_ENV === 'production' && secretKey.startsWith('sk_test_')) {
+            console.warn('⚠️ Paystack is using a TEST secret key in production');
+          }
+          provider = new PaystackProvider(secretKey);
+          break;
+        }
+        default:
+          throw new NotFoundError(`Unknown payment provider: ${name}`);
+      }
+      this.paymentProviderInstances.set(name, provider);
+    }
+    return provider;
+  }
+
+  /**
    * Get current provider configuration
    * @returns Current provider configuration
    */
@@ -117,5 +152,6 @@ export class ProviderFactory {
   static reset(): void {
     this.dataProviderInstance = null;
     this.authProviderInstance = null;
+    this.paymentProviderInstances.clear();
   }
 }

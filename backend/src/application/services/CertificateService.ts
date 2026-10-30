@@ -5,8 +5,7 @@ import { NotFoundError } from '../../core/errors/AppError';
 /**
  * Certificate Service
  *
- * Handles certificate-related business logic including
- * verification and payment status checking.
+ * Handles public certificate verification.
  */
 
 export class CertificateService {
@@ -17,7 +16,8 @@ export class CertificateService {
 
   async verifyCertificate(certificateId: string) {
     const certificate = await this.certificateRepo.findByCertificateId(certificateId);
-    if (!certificate) {
+    // A certificate only becomes valid once it is paid for
+    if (!certificate || (await this.paymentRepo.countSucceeded(certificate.id)) === 0) {
       throw new NotFoundError('Certificate not found');
     }
 
@@ -28,43 +28,6 @@ export class CertificateService {
       earnedAt: certificate.earnedAt,
       learnerName: certificate.learner?.name,
       module: certificate.module,
-    };
-  }
-
-  async getCertificateStatus(learnerId: string, moduleId: string) {
-    const certificate = await this.certificateRepo.findByLearnerAndModule(
-      learnerId,
-      moduleId
-    );
-
-    if (!certificate) {
-      return {
-        exists: false,
-        isPaid: false,
-      };
-    }
-
-    const payment = await this.paymentRepo.findByCertificateId(certificate.id);
-
-    return {
-      exists: true,
-      certificate,
-      isPaid: payment?.status === 'COMPLETED',
-      payment,
-    };
-  }
-
-  async checkPaymentStatus(certificateId: string) {
-    const certificate = await this.certificateRepo.findByCertificateId(certificateId);
-    if (!certificate) {
-      throw new NotFoundError('Certificate not found');
-    }
-
-    const payment = await this.paymentRepo.findByCertificateId(certificate.id);
-
-    return {
-      isPaid: payment?.status === 'COMPLETED',
-      payment,
     };
   }
 }

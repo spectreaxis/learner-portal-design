@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useLearnerProgress } from '@/lib/hooks/useLearner';
 import { useModules } from '@/lib/hooks/useModules';
-import { useCertificatePaymentStatus } from '@/lib/hooks/usePayment';
+import { useCertificatePayment, useCertificateCheckout, formatPrice } from '@/lib/hooks/usePayment';
 import { Award, Download, Share2, GraduationCap, Shield, Loader2, ArrowLeft, Lock } from 'lucide-react';
 import { BrandMark } from '@/components/brand-mark';
 import { useSession } from 'next-auth/react';
@@ -18,7 +18,6 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
   const { data: session } = useSession();
   const { data: modules = [], isLoading: modulesLoading } = useModules();
   const { data: learnerData, isLoading: learnerLoading } = useLearnerProgress();
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   // Find the certificate early (before any conditional returns)
   const certificate = learnerData?.certificates?.find(
@@ -29,9 +28,11 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
   const module = certificate ? modules.find((m) => m.id === certificate.moduleId) : null;
 
   // Check payment status (ALL HOOKS must be called before any conditional returns)
-  const { data: paymentData, isLoading: paymentLoading, refetch: refetchPayment } = useCertificatePaymentStatus(certificate?.id || '');
+  const { data: paymentData, isLoading: paymentLoading } = useCertificatePayment(certificate?.id || '');
+  const checkout = useCertificateCheckout(certificate?.id || '');
   const isPaid = paymentData?.isPaid || false;
-  const certificatePrice = 10; // KES (should match backend CERTIFICATE_PRICE)
+  const priceLabel = paymentData ? formatPrice(paymentData.price) : '';
+  const isOpening = checkout.phase === 'opening';
 
   const isLoading = modulesLoading || learnerLoading || paymentLoading;
 
@@ -71,10 +72,6 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
   const verifyUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/verify/${certificate.certificateId}`
     : `/verify/${certificate.certificateId}`;
-
-  const handlePaymentSuccess = () => {
-    refetchPayment();
-  };
 
   return (
     <>
@@ -136,11 +133,12 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
               </>
             ) : (
               <button
-                onClick={() => setIsPaymentModalOpen(true)}
-                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shadow-lg"
+                onClick={checkout.pay}
+                disabled={isOpening}
+                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shadow-lg disabled:opacity-70 disabled:cursor-wait"
               >
-                <Lock className="w-4 h-4" />
-                Pay KES {certificatePrice.toFixed(2)} to Download
+                {isOpening ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
+                {isOpening ? 'Opening secure checkout...' : `Pay ${priceLabel} to Download`}
               </button>
             )}
           </div>
@@ -157,14 +155,24 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
                 <Lock className="w-16 h-16 text-primary mx-auto mb-4" />
                 <h3 className="text-2xl font-bold text-foreground mb-2">Certificate Locked</h3>
                 <p className="text-muted-foreground mb-6">
-                  Complete payment of <strong>KES {certificatePrice.toFixed(2)}</strong> to view and download your certificate
+                  Complete payment of <strong>{priceLabel}</strong> to view and download your certificate
                 </p>
                 <button
-                  onClick={() => setIsPaymentModalOpen(true)}
-                  className="w-full bg-primary text-primary-foreground py-3 px-6 rounded-xl font-medium hover:bg-primary/90 transition-colors"
+                  onClick={checkout.pay}
+                  disabled={isOpening}
+                  className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground py-3 px-6 rounded-xl font-medium hover:bg-primary/90 transition-colors disabled:opacity-70 disabled:cursor-wait"
                 >
-                  Pay Now to Unlock
+                  {isOpening && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {isOpening ? 'Opening secure checkout...' : 'Pay Now to Unlock'}
                 </button>
+                {paymentData && paymentData.price.currency !== paymentData.chargeCurrency && (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Charged in {paymentData.chargeCurrency} at today&apos;s rate ·{' '}
+                    <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener noreferrer" className="underline">
+                      Rates By Exchange Rate API
+                    </a>
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -280,7 +288,7 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
                     Payment Required
                   </p>
                   <p className="text-xs text-amber-800 dark:text-amber-200">
-                    To download this certificate as a PDF, please complete the payment of KES {certificatePrice.toFixed(2)} via M-Pesa.
+                    To download this certificate as a PDF, please complete the payment of {priceLabel} with M-Pesa, card or another available method.
                     Your payment helps us maintain and improve the platform.
                   </p>
                 </div>
@@ -295,14 +303,12 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
         </div>
       </div>
 
-      {/* Payment Modal */}
+      {/* Payment status after the Paystack checkout popup */}
       <PaymentModal
-        isOpen={isPaymentModalOpen}
-        onClose={() => setIsPaymentModalOpen(false)}
-        certificateId={certificate.id}
-        moduleName={module.title}
-        amount={certificatePrice}
-        onPaymentSuccess={handlePaymentSuccess}
+        phase={checkout.phase}
+        error={checkout.error}
+        onRetry={checkout.pay}
+        onClose={checkout.reset}
       />
     </>
   );
