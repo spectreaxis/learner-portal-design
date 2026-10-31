@@ -97,16 +97,4 @@ export class QuizRepository extends BaseRepository<Quiz> {
     });
     return [...new Set(submissions.map((s) => s.quizId))];
   }
-
-  async findSubmissionsByLearner(learnerId: string): Promise<QuizSubmission[]> {
-    return this.dataProvider.findMany<QuizSubmission>('quizSubmission', {
-      where: { learnerId },
-      orderBy: { submittedAt: 'desc' },
-      take: 10,
-    });
-  }
-
-  async findSubmissionById(submissionId: string): Promise<QuizSubmission | null> {
-    return this.dataProvider.findById<QuizSubmission>('quizSubmission', submissionId);
-  }
 }

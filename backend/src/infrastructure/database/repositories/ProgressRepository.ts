@@ -53,13 +53,4 @@ export class ProgressRepository extends BaseRepository<LessonProgress> {
       orderBy: { completedAt: 'desc' },
     });
   }
-
-  async findByLearnerAndLesson(
-    learnerId: string,
-    lessonId: string
-  ): Promise<LessonProgress | null> {
-    return this.dataProvider.findUnique<LessonProgress>(this.model, {
-      learnerId_lessonId: { learnerId, lessonId },
-    });
-  }
 }

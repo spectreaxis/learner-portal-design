@@ -13,7 +13,6 @@ interface QuizSectionProps {
   title: string;
   questions: QuizQuestion[];
   quizId: string;
-  moduleId?: string;
   /** Certification mode: no per-question feedback, 80% pass mark */
   isAssessment?: boolean;
   /** Shown on the results screen once the quiz is passed, e.g. go to the next lesson */
@@ -27,7 +26,7 @@ interface QuizSectionProps {
   onComplete?: (score: number, maxScore: number, certificate?: any) => void;
 }
 
-export const QuizSection = memo(function QuizSection({ title, questions, quizId, moduleId, isAssessment = false, continueAction, onReview, savedResult, savedCertificate, onComplete }: QuizSectionProps) {
+export const QuizSection = memo(function QuizSection({ title, questions, quizId, isAssessment = false, continueAction, onReview, savedResult, savedCertificate, onComplete }: QuizSectionProps) {
   const submitQuizMutation = useSubmitQuiz();
   const { data: session } = useSession();
   const userId = (session?.user as any)?.id as string | undefined;

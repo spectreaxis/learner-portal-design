@@ -17,7 +17,7 @@ const lessonRepo = new LessonRepository(dataProvider);
 const moduleService = new ModuleService(moduleRepo, lessonRepo);
 
 // Get all modules
-router.get('/', async (req, res) => {
+router.get('/', async (_req, res) => {
   try {
     const modules = await moduleService.getAllModules();
 

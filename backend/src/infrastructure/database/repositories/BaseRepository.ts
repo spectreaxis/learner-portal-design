@@ -21,19 +21,11 @@ export abstract class BaseRepository<T> implements IRepository<T> {
     return this.dataProvider.findById<T>(this.model, id);
   }
 
-  async findMany(filters?: any): Promise<T[]> {
-    return this.dataProvider.findMany<T>(this.model, filters);
-  }
-
   async create(data: any): Promise<T> {
     return this.dataProvider.create<T>(this.model, data);
   }
 
   async update(id: string, data: any): Promise<T> {
     return this.dataProvider.update<T>(this.model, { id }, data);
-  }
-
-  async delete(id: string): Promise<T> {
-    return this.dataProvider.delete<T>(this.model, { id });
   }
 }

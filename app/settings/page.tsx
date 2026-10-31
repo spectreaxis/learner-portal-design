@@ -248,6 +248,9 @@ export default function SettingsPage() {
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">Name</label>
                 <input type="text" value={profileName} onChange={(e) => setProfileName(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all" required />
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Certificates you have paid for keep the name they were issued with. To fix a spelling, use Correct name on the certificate.
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">Email</label>

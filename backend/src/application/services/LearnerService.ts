@@ -1,5 +1,4 @@
 import { LearnerRepository, daysBetween } from '../../infrastructure/database/repositories/LearnerRepository';
-import { ProgressRepository } from '../../infrastructure/database/repositories/ProgressRepository';
 import { QuizRepository } from '../../infrastructure/database/repositories/QuizRepository';
 import { ActivityRepository } from '../../infrastructure/database/repositories/ActivityRepository';
 import {
@@ -18,7 +17,6 @@ import {
 export class LearnerService {
   constructor(
     private learnerRepo: LearnerRepository,
-    private progressRepo: ProgressRepository,
     private quizRepo: QuizRepository,
     private activityRepo: ActivityRepository
   ) {}
@@ -86,10 +84,6 @@ export class LearnerService {
       enrolledAt: updatedLearner.enrolledAt,
       currentStreak: updatedLearner.currentStreak,
     };
-  }
-
-  async trackActivity(learnerId: string) {
-    await this.learnerRepo.updateActivity(learnerId);
   }
 
   async setActivityCompleted(learnerId: string, activityId: string, completed: boolean) {

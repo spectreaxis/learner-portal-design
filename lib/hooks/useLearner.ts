@@ -3,7 +3,7 @@ import { useSession } from 'next-auth/react';
 import { apiClient } from '../api-client';
 
 export function useLearnerProgress() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
 
   return useQuery({
     queryKey: ['learner', 'progress'],
@@ -65,7 +65,7 @@ export function useUpdateProgress() {
 
       return { previous };
     },
-    onError: (err, variables, context: any) => {
+    onError: (_err, _variables, context: any) => {
       // Rollback on error
       if (context?.previous) {
         queryClient.setQueryData(['learner', 'progress'], context.previous);
@@ -104,7 +104,7 @@ export function useSubmitQuiz() {
 
       return { previous };
     },
-    onError: (err, variables, context: any) => {
+    onError: (_err, _variables, context: any) => {
       if (context?.previous) {
         queryClient.setQueryData(['learner', 'progress'], context.previous);
       }

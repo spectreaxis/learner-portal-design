@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 
-export function errorHandler(err: any, req: Request, res: Response, next: NextFunction) {
+// Express recognises an error handler by its four parameters, so all must stay
+export function errorHandler(err: any, _req: Request, res: Response, _next: NextFunction) {
   console.error('Error:', err);
 
   const status = err.status || 500;

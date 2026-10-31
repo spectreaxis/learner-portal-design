@@ -142,10 +142,4 @@ export class JWTAuthProvider implements IAuthProvider {
     // Update password
     await this.learnerRepo.update(userId, { password: hashedPassword });
   }
-
-  async logout(userId: string): Promise<void> {
-    // JWT is stateless, so logout is handled client-side by removing the token
-    // This method is here for interface completeness and future session management
-    // Could implement token blacklisting or refresh token revocation here
-  }
 }

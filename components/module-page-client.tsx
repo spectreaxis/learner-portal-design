@@ -39,11 +39,6 @@ export function ModulePageClient({ module, moduleId }: ModulePageClientProps) {
   const firstIncompleteIndex = module.lessons?.findIndex(l => !completedLessonIds.has(l.id)) ?? 0;
   const currentLessonIndex = firstIncompleteIndex === -1 ? module.lessons.length - 1 : firstIncompleteIndex;
 
-  // Check if module has a certificate
-  const hasCertificate = learnerData?.certificates?.some(
-    (cert: any) => cert.moduleId === moduleId
-  );
-
   if (loadError) {
     return <LoadError {...loadError} />;
   }

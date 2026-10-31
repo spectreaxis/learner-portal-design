@@ -17,32 +17,3 @@ export function DashboardSkeleton() {
     </div>
   );
 }
-
-export function ModuleCardSkeleton() {
-  return (
-    <div className="p-6 rounded-2xl bg-card border border-border">
-      <div className="space-y-4">
-        <div className="h-6 w-32 bg-muted animate-pulse rounded" />
-        <div className="h-4 w-full bg-muted animate-pulse rounded" />
-        <div className="h-4 w-3/4 bg-muted animate-pulse rounded" />
-      </div>
-    </div>
-  );
-}
-
-export function QuizSkeleton() {
-  return (
-    <div className="space-y-6">
-      <div className="space-y-4">
-        <div className="h-6 w-3/4 bg-muted animate-pulse rounded" />
-        <div className="h-4 w-full bg-muted animate-pulse rounded" />
-        <div className="h-4 w-5/6 bg-muted animate-pulse rounded" />
-      </div>
-      <div className="space-y-3">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-12 w-full bg-muted animate-pulse rounded-lg" />
-        ))}
-      </div>
-    </div>
-  );
-}

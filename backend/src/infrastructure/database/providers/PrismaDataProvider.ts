@@ -98,24 +98,12 @@ export class PrismaDataProvider implements IDataProvider {
           return prismaModel.create({ data: op.data });
         case 'update':
           return prismaModel.update({ where: op.where!, data: op.data });
-        case 'delete':
-          return prismaModel.delete({ where: op.where! });
-        case 'upsert':
-          return prismaModel.upsert({
-            where: op.where!,
-            create: op.data,
-            update: op.data,
-          });
         default:
           throw new Error(`Unsupported operation: ${op.operation}`);
       }
     });
 
     return (await this.prisma.$transaction(prismaOperations)) as T;
-  }
-
-  async rawQuery<T>(query: string, params?: any[]): Promise<T> {
-    return (await this.prisma.$queryRawUnsafe(query, ...(params || []))) as T;
   }
 
   /**

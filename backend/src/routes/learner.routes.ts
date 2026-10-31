@@ -31,7 +31,7 @@ const paymentRepo = new PaymentRepository(dataProvider);
 const activityRepo = new ActivityRepository(dataProvider);
 
 // Initialize services
-const learnerService = new LearnerService(learnerRepo, progressRepo, quizRepo, activityRepo);
+const learnerService = new LearnerService(learnerRepo, quizRepo, activityRepo);
 const progressService = new ProgressService(progressRepo, learnerRepo, lessonRepo, quizRepo);
 const quizService = new QuizService(quizRepo, certificateRepo, learnerRepo, lessonRepo, progressRepo);
 const certificateService = new CertificateService(certificateRepo, paymentRepo);
@@ -173,6 +173,50 @@ router.post('/activities', async (req: AuthRequest, res) => {
     }
 
     res.status(500).json({ error: 'Failed to track activity' });
+  }
+});
+
+// The learner's own certificate; the first view after payment issues it
+router.get('/certificates/:certificateId/details', async (req: AuthRequest, res) => {
+  try {
+    const certificate = await certificateService.getForLearner(
+      req.userId!,
+      req.params.certificateId as string
+    );
+
+    res.setHeader('Cache-Control', 'no-store');
+    res.json(certificate);
+  } catch (error: any) {
+    console.error('Certificate fetch error:', error);
+
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+
+    res.status(500).json({ error: 'Failed to load certificate' });
+  }
+});
+
+// Correct the name on an issued certificate (re-signs it and records the change)
+router.post('/certificates/:certificateId/name-corrections', async (req: AuthRequest, res) => {
+  try {
+    const { name, reason } = req.body;
+
+    const certificate = await certificateService.correctName(
+      req.userId!,
+      req.params.certificateId as string,
+      { name, reason, ipAddress: req.ip }
+    );
+
+    res.json(certificate);
+  } catch (error: any) {
+    console.error('Certificate name correction error:', error);
+
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+
+    res.status(500).json({ error: 'Failed to correct the name' });
   }
 });
 

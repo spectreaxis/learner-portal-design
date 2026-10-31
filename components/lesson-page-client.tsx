@@ -309,7 +309,6 @@ export function LessonPageClient({
                     title={relevantQuiz.title}
                     questions={relevantQuiz.questions}
                     quizId={relevantQuiz.id}
-                    moduleId={moduleId}
                     savedResult={gate.latestQuizResults[relevantQuiz.id]}
                     onReview={() => setActiveTab('lesson')}
                     continueAction={
@@ -516,7 +515,6 @@ export function LessonPageClient({
                     questions={module.certificationAssessment.questions}
                     key={module.certificationAssessment.id}
                     quizId={module.certificationAssessment.id}
-                    moduleId={moduleId}
                     isAssessment
                     savedResult={gate.latestQuizResults[module.certificationAssessment.id]}
                     savedCertificate={gate.moduleCertificate}

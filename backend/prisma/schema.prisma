@@ -106,20 +106,46 @@ model QuizSubmission {
   @@index([submittedAt])
 }
 
+// Earned on passing the certification assessment, issued on first view after
+// payment: issuing fixes the recipient's name and signs the record
 model Certificate {
-  id              String   @id @default(cuid())
+  id              String                  @id @default(cuid())
   learnerId       String
   moduleId        String
-  certificateId   String   @unique
-  earnedAt        DateTime @default(now())
+  certificateId   String                  @unique
+  earnedAt        DateTime                @default(now())
+  recipientName   String?
+  // Raised by every name correction; copies printed before it are superseded
+  revision        Int                     @default(1)
+  // Ed25519 over the issued fields (see core/utils/certificate-signing.ts)
+  signature       String?
+  // No longer written or read; kept until this release is live so rolling back
+  // stays safe, then dropped in a migration of its own
   verificationUrl String?
-  learner         Learner  @relation(fields: [learnerId], references: [id], onDelete: Cascade)
-  module          Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  learner         Learner                 @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  module          Module                  @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   payments        Payment[]
+  nameChanges     CertificateNameChange[]
 
   @@unique([learnerId, moduleId])
   @@index([certificateId])
   @@index([learnerId])
+}
+
+// Audit trail of name corrections on issued certificates; never edited or deleted
+model CertificateNameChange {
+  id            String      @id @default(cuid())
+  certificateId String
+  previousName  String
+  newName       String
+  reason        String
+  // The certificate revision this correction produced
+  revision      Int
+  ipAddress     String?
+  createdAt     DateTime    @default(now())
+  certificate   Certificate @relation(fields: [certificateId], references: [id], onDelete: Cascade)
+
+  @@index([certificateId])
 }
 
 // One row per payment attempt; a certificate is paid once any attempt succeeds

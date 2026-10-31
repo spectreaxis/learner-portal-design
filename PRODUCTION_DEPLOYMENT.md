@@ -108,7 +108,7 @@ JWT_SECRET=${GENERATE_RANDOM_SECRET}
 DATA_PROVIDER=prisma
 
 # Server Configuration
-APP_URL=https://learn.cogniwiseai.com        # builds certificate verify links: ${APP_URL}/verify/<id>
+CERTIFICATE_SIGNING_KEY=${ED25519_KEY}       # signs certificates; required, see "Certificate Signing Key" below
 FRONTEND_URL=https://learn.cogniwiseai.com   # CORS: the only origin allowed; must match the portal exactly
 PORT=4000
 NODE_ENV=production                          # see note: production reported "development" on Oct 30
@@ -123,9 +123,7 @@ CERTIFICATE_LIST_PRICE=23.00                 # optional: shown struck through wi
 
 **Important Notes:**
 - The backend does **not** use `API_URL`; only the portal does
-- `APP_URL` was `https://api.cogniwiseai.com` until Oct 30, 2026, which pointed stored certificate
-  verify links at the API. The portal builds its own verify links, so users were unaffected, but
-  keep it on the portal domain
+- `APP_URL` is no longer read (Oct 31, 2026): verify links are built by the portal. It can be deleted
 - `NODE_ENV` must actually be `production`. On Oct 30, 2026 `/health` reported `"environment":"development"`.
   In development mode the backend returns error details and stack traces to API callers, logs every
   Prisma query, and if `JWT_SECRET` is missing silently signs tokens with the public fallback
@@ -797,7 +795,27 @@ by hand, so the order matters.
 **Rollback:** redeploy the previous commit in Coolify. The old code never used the new `Payment`
 table, so no database rollback is needed.
 
-### 2. Database Backup Automation
+### 2. Certificate Signing Key (before deploying the certificate redesign)
+The backend refuses to start without `CERTIFICATE_SIGNING_KEY`, in every environment. See
+[CERTIFICATES.md](CERTIFICATES.md) for what it protects.
+
+1. [ ] Generate the key on a trusted machine, not the VPS shell history:
+   `openssl genpkey -algorithm ed25519 -outform DER | base64 -w0`
+2. [ ] Store it in the password manager. **Losing or changing it makes every issued certificate fail
+   verification**; there is no rotation procedure yet
+3. [ ] **Coolify, backend env:** add `CERTIFICATE_SIGNING_KEY` *before* deploying: without it the new
+   backend exits at startup. Delete `APP_URL` (no longer read)
+4. [ ] **Deploy, then migrate at once** (`20261031120000_certificate_integrity`) as in the Paystack
+   steps above. Until the migration runs, the new backend fails every request that reads
+   certificates, including the dashboard's `/progress`. The migration only adds columns and the
+   `CertificateNameChange` audit table, so the previous release keeps working on the migrated
+   database and rolling back the code needs no database rollback
+5. [ ] **Check:** open `/verify/<id>` for a paid certificate: it shows "Certificate Verified" and a
+   security code. Existing paid certificates are issued (name fixed, signed) on that first view
+6. [ ] **Next release:** drop the unused `Certificate.verificationUrl` column (remove it from
+   `schema.prisma` and create the migration), once rolling back past this release is no longer needed
+
+### 3. Database Backup Automation
 - [ ] Set up automated daily backups
   ```bash
   # Cron job example
@@ -806,18 +824,17 @@ table, so no database rollback is needed.
 - [ ] Configure Vultr snapshots (weekly recommended)
 - [ ] Test backup restoration procedure
 
-### 3. Monitoring Setup
+### 4. Monitoring Setup
 - [ ] Uptime monitoring (UptimeRobot or similar)
 - [ ] Error tracking (Sentry integration)
 - [ ] Server monitoring (Coolify built-in available)
 - [ ] Database performance monitoring
 
-### 4. Security Hardening
+### 5. Security Hardening
 - [x] **Upgrade the portal's Next.js from 16.2.6 to 16.4.3** (Oct 30, 2026). 16.2.x has published
       critical advisories, including unauthenticated remote code execution in the Image
       Optimization API, which the portal enables
 - [ ] Set backend `NODE_ENV=production` after confirming `JWT_SECRET` is set (see Backend notes)
-- [ ] Set backend `APP_URL=https://learn.cogniwiseai.com`
 - [x] Login reports "Sign-in is temporarily unavailable" instead of "Invalid email or password"
       when the backend is unreachable or returns 5xx (Oct 30, 2026)
 - [ ] Enable SSH key-only authentication (disable password auth)
@@ -826,13 +843,13 @@ table, so no database rollback is needed.
 - [ ] Set up automatic security updates
 - [ ] Regular dependency updates (npm audit)
 
-### 5. Performance Optimization
+### 6. Performance Optimization
 - [ ] Implement Redis caching for frequently accessed data
 - [ ] Add CDN for static assets
 - [ ] Database query optimization
 - [ ] API response compression
 
-### 6. Content Management
+### 7. Content Management
 - [ ] Add remaining course modules
 - [ ] Upload video content
 - [ ] Create quiz questions
@@ -840,7 +857,7 @@ table, so no database rollback is needed.
 - [ ] Confirm the certificate signatories ("Dr. Sarah Mitchell", "Prof. James Chen" in
       `components/CertificatePDF.tsx`) are real people at Cogniwise, or replace them
 
-### 7. Housekeeping
+### 8. Housekeeping
 - [ ] Create the `hello@cogniwiseai.com` mailbox or forward (landing page "Book a briefing" target)
 - [x] Removed Vercel and Render remnants (Oct 30, 2026): `@vercel/analytics` and its 404ing
       script, the backend's unused `@vercel/speed-insights`, `vercel.json`, `render.yaml`

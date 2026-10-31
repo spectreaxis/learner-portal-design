@@ -19,7 +19,7 @@ export interface FindManyOptions extends FindOptions {
 
 export interface TransactionOperation {
   model: string;
-  operation: 'create' | 'update' | 'delete' | 'upsert';
+  operation: 'create' | 'update';
   data: Record<string, any>;
   where?: Record<string, any>;
 }
@@ -126,12 +126,4 @@ export interface IDataProvider {
    * @returns Transaction result
    */
   transaction<T>(operations: TransactionOperation[]): Promise<T>;
-
-  /**
-   * Raw query execution (for complex queries)
-   * @param query - Raw query string
-   * @param params - Query parameters
-   * @returns Query result
-   */
-  rawQuery<T>(query: string, params?: any[]): Promise<T>;
 }

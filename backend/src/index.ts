@@ -12,8 +12,9 @@ import learnerRoutes, { certificateRouter } from './routes/learner.routes';
 import paymentRoutes, { webhookRouter } from './routes/payment.routes';
 import { errorHandler } from './middleware/error.middleware';
 import { publicRateLimiter } from './middleware/rate-limit.middleware';
-import { prismaClient, disconnectPrisma } from './infrastructure/prisma/client';
+import { disconnectPrisma } from './infrastructure/prisma/client';
 import { ProviderFactory } from './config/providers.config';
+import { assertSigningKey } from './core/utils/certificate-signing';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -54,7 +55,7 @@ app.use('/api/learner', learnerRoutes);
 app.use('/api/payments', paymentRoutes);
 
 // Health check
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   const config = ProviderFactory.getConfig();
   res.json({
     status: 'ok',
@@ -72,6 +73,8 @@ app.get('/health', (req, res) => {
 if (process.env.NODE_ENV === 'production') {
   ProviderFactory.getPaymentProvider();
 }
+// Same for the certificate signing key
+assertSigningKey();
 
 // Error handling
 app.use(errorHandler);

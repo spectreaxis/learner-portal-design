@@ -53,19 +53,6 @@ export interface IAuthProvider {
   getTokenSubject(token: string): string | null;
 
   /**
-   * Refresh authentication token (optional for JWT, required for some providers)
-   * @param refreshToken - Refresh token
-   * @returns New access token
-   */
-  refreshToken?(refreshToken: string): Promise<{ token: string }>;
-
-  /**
-   * Logout user (cleanup sessions if needed)
-   * @param userId - User ID
-   */
-  logout?(userId: string): Promise<void>;
-
-  /**
    * Change user password
    * @param userId - User ID
    * @param currentPassword - Current password

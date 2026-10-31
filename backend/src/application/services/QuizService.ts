@@ -3,6 +3,7 @@ import { CertificateRepository } from '../../infrastructure/database/repositorie
 import { LearnerRepository } from '../../infrastructure/database/repositories/LearnerRepository';
 import { LessonRepository } from '../../infrastructure/database/repositories/LessonRepository';
 import { ProgressRepository } from '../../infrastructure/database/repositories/ProgressRepository';
+import { newCertificateId } from './CertificateService';
 import { NotFoundError, ValidationError } from '../../core/errors/AppError';
 import { SELF_CHECK_PASSING_PERCENTAGE, SELF_CHECK_QUIZ_TYPE } from '../../core/utils/quiz-placement';
 
@@ -128,16 +129,10 @@ export class QuizService {
         );
 
       if (!existingCertificate) {
-        // Generate unique certificate ID
-        const moduleNumber = certification.module.number;
-        const timestamp = Date.now().toString(36).toUpperCase();
-        const certificateId = `IIAIC-M${moduleNumber}-${timestamp}`;
-
         certificateRecord = await this.certificateRepo.createCertificate({
           learnerId,
           moduleId: certification.moduleId,
-          certificateId,
-          verificationUrl: `${process.env.APP_URL || 'http://localhost:3000'}/verify/${certificateId}`,
+          certificateId: newCertificateId(certification.module.number),
         });
       } else {
         certificateRecord = existingCertificate;

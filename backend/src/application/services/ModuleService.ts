@@ -36,13 +36,4 @@ export class ModuleService {
 
     return lesson;
   }
-
-  async getLessonsByModule(moduleId: string) {
-    const module = await this.moduleRepo.findById(moduleId);
-    if (!module) {
-      throw new NotFoundError('Module not found');
-    }
-
-    return this.lessonRepo.findByModuleId(moduleId);
-  }
 }

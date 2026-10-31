@@ -9,7 +9,7 @@ type SelfCheckQuiz = Module['selfCheckQuizzes'][number];
  * Lesson order a self-check quiz follows. The API provides it; titles like
  * "(Lessons 1–3)" are parsed as a fallback for cached module data.
  */
-export function getQuizAfterLessonOrder(quiz: SelfCheckQuiz): number | null {
+function getQuizAfterLessonOrder(quiz: SelfCheckQuiz): number | null {
   if (quiz.afterLessonOrder != null) return quiz.afterLessonOrder;
   const match = quiz.title.match(/Lessons?\s+(\d+)(?:\s*[–-]\s*(\d+))?/);
   return match ? Number(match[2] ?? match[1]) : null;

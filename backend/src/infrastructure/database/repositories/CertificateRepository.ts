@@ -6,8 +6,16 @@ export interface Certificate {
   learnerId: string;
   moduleId: string;
   certificateId: string;
-  verificationUrl: string;
   earnedAt: Date;
+  recipientName: string | null;
+  revision: number;
+  signature: string | null;
+}
+
+export interface CertificateRecord extends Certificate {
+  learner: { name: string };
+  module: { title: string; number: number };
+  nameChanges: { revision: number; createdAt: Date }[];
 }
 
 export interface Certification {
@@ -30,20 +38,14 @@ export class CertificateRepository extends BaseRepository<Certificate> {
     super('certificate', dataProvider);
   }
 
-  async findByCertificateId(certificateId: string): Promise<any | null> {
-    return this.dataProvider.findUnique(this.model, { certificateId }, {
+  async findByCertificateId(certificateId: string): Promise<CertificateRecord | null> {
+    return this.dataProvider.findUnique<CertificateRecord>(this.model, { certificateId }, {
       include: {
-        learner: {
-          select: {
-            name: true,
-            email: true,
-          },
-        },
-        module: {
-          select: {
-            title: true,
-            number: true,
-          },
+        learner: { select: { name: true } },
+        module: { select: { title: true, number: true } },
+        nameChanges: {
+          select: { revision: true, createdAt: true },
+          orderBy: { createdAt: 'asc' },
         },
       },
     });
@@ -62,7 +64,6 @@ export class CertificateRepository extends BaseRepository<Certificate> {
     learnerId: string;
     moduleId: string;
     certificateId: string;
-    verificationUrl: string;
   }): Promise<Certificate> {
     return this.dataProvider.create<Certificate>(this.model, {
       ...data,
@@ -70,11 +71,43 @@ export class CertificateRepository extends BaseRepository<Certificate> {
     });
   }
 
-  async findCertificationById(certificationId: string): Promise<Certification | null> {
-    return this.dataProvider.findById<Certification>('certification', certificationId);
+  async issue(id: string, recipientName: string, signature: string): Promise<void> {
+    await this.dataProvider.update(this.model, { id }, { recipientName, signature });
   }
 
-  async findCertificationByModule(moduleId: string): Promise<Certification | null> {
-    return this.dataProvider.findUnique<Certification>('certification', { moduleId });
+  /**
+   * Renames an issued certificate and records the change in one transaction.
+   * Matching on the current revision makes a concurrent correction fail
+   * rather than both passing the correction limit.
+   */
+  async correctName(
+    certificate: Certificate,
+    change: { newName: string; reason: string; signature: string; ipAddress?: string }
+  ): Promise<void> {
+    const revision = certificate.revision + 1;
+    await this.dataProvider.transaction([
+      {
+        model: this.model,
+        operation: 'update',
+        where: { id: certificate.id, revision: certificate.revision },
+        data: { recipientName: change.newName, signature: change.signature, revision },
+      },
+      {
+        model: 'certificateNameChange',
+        operation: 'create',
+        data: {
+          certificateId: certificate.id,
+          previousName: certificate.recipientName,
+          newName: change.newName,
+          reason: change.reason,
+          revision,
+          ipAddress: change.ipAddress,
+        },
+      },
+    ]);
+  }
+
+  async findCertificationById(certificationId: string): Promise<Certification | null> {
+    return this.dataProvider.findById<Certification>('certification', certificationId);
   }
 }

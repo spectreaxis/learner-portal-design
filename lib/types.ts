@@ -58,24 +58,3 @@ export interface Module {
   };
   keyTakeaways: string[];
 }
-
-export interface LearnerProgress {
-  moduleId: string;
-  lessonId: string;
-  completed: boolean;
-  quizScores: { quizId: string; score: number; maxScore: number }[];
-  certificationPassed: boolean;
-  completedAt?: Date;
-}
-
-export interface Learner {
-  id: string;
-  name: string;
-  email: string;
-  avatar?: string;
-  enrolledAt: Date;
-  progress: LearnerProgress[];
-  currentStreak: number;
-  totalLessonsCompleted: number;
-  certificates: { moduleId: string; earnedAt: Date; certificateId: string }[];
-}

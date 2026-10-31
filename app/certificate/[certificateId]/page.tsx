@@ -1,16 +1,15 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useLearnerProgress } from '@/lib/hooks/useLearner';
 import { useModules } from '@/lib/hooks/useModules';
 import { useCertificatePayment, useCertificateCheckout, formatPrice } from '@/lib/hooks/usePayment';
-import { Award, Download, GraduationCap, Shield, Loader2, ArrowLeft, Lock } from 'lucide-react';
-import { BrandMark } from '@/components/brand-mark';
-import { useSession } from 'next-auth/react';
+import { useLearnerCertificate } from '@/lib/hooks/useCertificate';
+import { Download, Loader2, ArrowLeft, Lock, PenLine, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { PDFDownloadLink } from '@react-pdf/renderer';
-import { CertificatePDF } from '@/components/CertificatePDF';
+import { CertificatePreview, downloadFile, useCertificateFile } from '@/components/certificate-preview';
+import { CertificateNameDialog } from '@/components/certificate-name-dialog';
 import { PaymentModal } from '@/components/PaymentModal';
 import { ShareCertificateButton } from '@/components/share-certificate-button';
 import { CertificatePrice } from '@/components/certificate-price';
@@ -19,11 +18,11 @@ import { failedLoad } from '@/lib/failed-load';
 
 export default function CertificateDetailPage({ params }: { params: Promise<{ certificateId: string }> }) {
   const { certificateId } = React.use(params);
-  const { data: session } = useSession();
   const modulesQuery = useModules();
   const learnerQuery = useLearnerProgress();
   const { data: modules = [], isLoading: modulesLoading } = modulesQuery;
   const { data: learnerData, isLoading: learnerLoading } = learnerQuery;
+  const [correcting, setCorrecting] = useState(false);
 
   // Find the certificate early (before any conditional returns)
   const certificate = learnerData?.certificates?.find(
@@ -37,14 +36,35 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
   const paymentQuery = useCertificatePayment(certificate?.id || '');
   const { data: paymentData, isLoading: paymentLoading } = paymentQuery;
   const checkout = useCertificateCheckout(certificate?.id || '');
-  const isPaid = paymentData?.isPaid || false;
   const priceLabel = paymentData ? formatPrice(paymentData.price) : '';
   const isOpening = checkout.phase === 'opening';
 
-  const isLoading = modulesLoading || learnerLoading || paymentLoading;
+  // The name, ID and security code printed on it; the first fetch after payment issues it
+  const recordQuery = useLearnerCertificate(certificate ? certificateId : '', paymentData?.isPaid);
+  const record = recordQuery.data;
+
+  const issueDate = certificate
+    ? new Date(certificate.earnedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+    : '';
+  const verifyUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/verify/${certificateId}`
+    : `/verify/${certificateId}`;
+
+  // Until payment, the PDF is a specimen: no ID, security code or QR code
+  const file = useCertificateFile({
+    recipientName: record?.recipientName ?? '',
+    moduleNumber: module?.number ?? 0,
+    moduleTitle: module?.title ?? '',
+    issueDate,
+    issued: record?.isIssued
+      ? { certificateId: record.certificateId, securityCode: record.securityCode, verifyUrl }
+      : null,
+  });
+
+  const isLoading = modulesLoading || learnerLoading || paymentLoading || (!!certificate && recordQuery.isLoading);
   // Without the learner's data a missing certificate can't be told from one
   // that didn't load, and without its payment status a paid one would show as locked
-  const loadError = failedLoad(modulesQuery, learnerQuery, paymentQuery);
+  const loadError = failedLoad(modulesQuery, learnerQuery, paymentQuery, recordQuery);
 
   if (loadError) {
     return (
@@ -81,27 +101,21 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
     notFound();
   }
 
-  const issueDate = new Date(certificate.earnedAt).toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  });
+  // Waiting on the payment status, which the record query is keyed on
+  if (!record) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" aria-label="Loading certificate" />
+      </div>
+    );
+  }
 
-  const recipientName = session?.user?.name || learnerData?.name || 'Learner';
-
-  // Until payment, the preview must not contain the real certificate details:
-  // a CSS blur alone can be removed or read straight from the page
-  const preview = isPaid
-    ? { recipientName, issueDate, certificateId: certificate.certificateId }
-    : { recipientName: 'Your Name', issueDate: '— — —', certificateId: 'IIAIC-XX-XXXXXXXX' };
-  const verifyUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/verify/${certificate.certificateId}`
-    : `/verify/${certificate.certificateId}`;
+  const fileName = `Cogniwise-Artificial-Intelligence-Literacy-Certificate-Module-${module.number}-${certificateId}.pdf`;
+  const previewLabel = `${record.isIssued ? 'Certificate' : 'Specimen certificate'} of completion for Module ${module.number}, awarded to ${record.recipientName}`;
 
   return (
     <>
-      {/* Navigation */}
-      <div className="print:hidden p-6 max-w-5xl mx-auto">
+      <div className="p-6 max-w-5xl mx-auto">
         <Link
           href="/certificate"
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
@@ -110,51 +124,30 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
           Back to Certificates
         </Link>
 
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <h1 className="text-2xl font-bold text-foreground">Certificate Details</h1>
-          <div className="flex gap-3">
-            {paymentLoading ? (
-              <button
-                disabled
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted text-muted-foreground text-sm font-medium cursor-not-allowed"
-              >
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Checking...
-              </button>
-            ) : isPaid ? (
+          <div className="flex flex-wrap gap-3">
+            {record.isIssued ? (
               <>
-                <PDFDownloadLink
-                  document={
-                    <CertificatePDF
-                      recipientName={recipientName}
-                      moduleNumber={module.number}
-                      moduleTitle={module.title}
-                      certificateId={certificate.certificateId}
-                      issueDate={issueDate}
-                      verifyUrl={verifyUrl}
-                    />
-                  }
-                  fileName={`Cogniwise-Artificial-Intelligence-Literacy-Certificate-Module-${module.number}-${certificate.certificateId}.pdf`}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm"
+                <button
+                  onClick={() => file.blob && downloadFile(file.blob, fileName)}
+                  disabled={!file.blob}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm disabled:opacity-70 disabled:cursor-wait"
                 >
-                  {({ loading }) =>
-                    loading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Preparing...
-                      </>
-                    ) : (
-                      <>
-                        <Download className="w-4 h-4" />
-                        Download PDF
-                      </>
-                    )
-                  }
-                </PDFDownloadLink>
+                  {file.blob ? <Download className="w-4 h-4" /> : <Loader2 className="w-4 h-4 animate-spin" />}
+                  {file.blob ? 'Download PDF' : 'Preparing...'}
+                </button>
                 <ShareCertificateButton
                   verifyUrl={verifyUrl}
                   title={`Cogniwise Artificial Intelligence Literacy certificate: Module ${module.number}`}
                 />
+                <button
+                  onClick={() => setCorrecting(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-card border border-border text-foreground text-sm font-medium hover:bg-muted transition-colors shadow-sm"
+                >
+                  <PenLine className="w-4 h-4" />
+                  Correct name
+                </button>
               </>
             ) : (
               <button
@@ -168,163 +161,89 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ ce
             )}
           </div>
         </div>
-      </div>
 
-      {/* Certificate Preview */}
-      <div className="max-w-5xl mx-auto p-6">
-        <div className="relative rounded-2xl overflow-clip shadow-lg bg-white border-8 border-primary">
-          {/* Payment Required Overlay: the certificate is taller than most screens, so the
-              card sits at its top and stays in view while the page scrolls */}
-          {!isPaid && (
-            <div className="absolute inset-0 z-50 flex items-start justify-center pt-10 bg-black/60 backdrop-blur-md">
-              <div className="sticky top-10 text-center p-8 bg-white/90 rounded-2xl shadow-2xl max-w-md mx-4">
-                <Lock className="w-16 h-16 text-primary mx-auto mb-4" />
-                <h3 className="text-2xl font-bold text-foreground mb-4">Certificate Locked</h3>
-                {paymentData && (
-                  <div className="mb-4">
-                    <CertificatePrice price={paymentData.price} listPrice={paymentData.listPrice} />
-                  </div>
-                )}
-                <p className="text-muted-foreground mb-6">
-                  Pay once to view and download your certificate
-                </p>
-                <button
-                  onClick={checkout.pay}
-                  disabled={isOpening}
-                  className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground py-3 px-6 rounded-xl font-medium hover:bg-primary/90 transition-colors disabled:opacity-70 disabled:cursor-wait"
-                >
-                  {isOpening && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {isOpening ? 'Opening secure checkout...' : 'Pay Now to Unlock'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Certificate Card */}
-          <div className={`relative p-12 md:p-16 bg-white ${!isPaid ? 'select-none pointer-events-none' : ''}`}>
-            {/* Inner border */}
-            <div className="border-2 border-primary/30 p-10 relative">
-              {/* Seal */}
-              <div className="absolute top-4 right-4 w-20 h-20 rounded-full border-4 border-gold bg-gold/10 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="text-[8px] font-bold leading-tight text-gold-foreground px-1">
-                    COGNIWISE<br />ARTIFICIAL<br />INTELLIGENCE<br />LITERACY
-                  </div>
-                </div>
-              </div>
-
-              {/* Content */}
-              <div className="text-center">
-                {/* Logo and Issuer */}
-                <div className="mb-8">
-                  <BrandMark className="w-12 h-12 mx-auto mb-3 text-primary" />
-                  <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-1">
-                    COGNIWISE
-                  </p>
-                  <p className="text-3xl font-bold text-foreground mb-6">ARTIFICIAL INTELLIGENCE LITERACY</p>
-                  <p className="text-xs text-muted-foreground uppercase tracking-[0.25em]">
-                    Certificate of Completion
-                  </p>
-                </div>
-
-                {/* Module Title */}
-                <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-8">
-                  Module {module.number}
-                </h1>
-
-                {/* Divider */}
-                <div className="flex items-center justify-center gap-4 mb-8">
-                  <div className="h-px w-32 bg-border" />
-                  <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center">
-                    <Award className="w-6 h-6 text-gold" />
-                  </div>
-                  <div className="h-px w-32 bg-border" />
-                </div>
-
-                {/* Awarded To */}
-                <p className="text-sm text-muted-foreground mb-3">
-                  This is to certify that
-                </p>
-                <p className="text-4xl md:text-5xl font-bold text-primary mb-4">
-                  {preview.recipientName}
-                </p>
-
-                <p className="text-base text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
-                  has successfully completed all lessons and assessments of{' '}
-                  <strong>{module.title}</strong> in the Cogniwise Artificial Intelligence Literacy Basic AI/ML Course,
-                  demonstrating comprehensive understanding and practical knowledge of the subject matter.
-                </p>
-
-                {/* Certificate Details */}
-                <div className="flex flex-col md:flex-row items-center justify-center gap-10 mt-8 pt-6 border-t border-border">
-                  <div className="text-center">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
-                      Date of Issue
-                    </p>
-                    <p className="text-base font-semibold text-foreground">{preview.issueDate}</p>
-                  </div>
-                  <div className="hidden md:block h-10 w-px bg-border" />
-                  <div className="text-center">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
-                      Certificate ID
-                    </p>
-                    <p className="text-base font-semibold text-foreground font-mono">
-                      {preview.certificateId}
-                    </p>
-                  </div>
-                  <div className="hidden md:block h-10 w-px bg-border" />
-                  <div className="text-center">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
-                      Module
-                    </p>
-                    <p className="text-base font-semibold text-foreground">Module {module.number}</p>
-                  </div>
-                </div>
-
-                {/* Footer */}
-                <div className="mt-10 pt-6 border-t border-border">
-                  <p className="text-xs text-muted-foreground flex items-center justify-center gap-2 mb-2">
-                    <Shield className="w-3.5 h-3.5" />
-                    Verified under the Cogniwise Artificial Intelligence Literacy Framework
-                  </p>
-                  <p className="text-[10px] text-muted-foreground">
-                    Verify at {isPaid ? verifyUrl : '—'} • This certificate demonstrates foundational AI/ML literacy
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+        {/* The preview is the PDF itself, drawn on screen */}
+        <div className="rounded-2xl overflow-hidden shadow-lg border border-border">
+          <CertificatePreview blob={file.blob} failed={file.failed} label={previewLabel} />
         </div>
 
-        {/* Info section */}
-        <div className="print:hidden mt-8 p-6 rounded-2xl bg-card border border-border">
-          <h3 className="font-semibold text-foreground mb-3">About This Certificate</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            This certificate verifies that the learner has successfully completed Module {module.number}: {module.title} with a passing score on the certification assessment.
-          </p>
-          {!paymentLoading && !isPaid && (
-            <div className="mt-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
-              <div className="flex items-start gap-3">
-                <Lock className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-amber-900 dark:text-amber-100 mb-1">
-                    Payment Required
-                  </p>
-                  <p className="text-xs text-amber-800 dark:text-amber-200">
-                    To download this certificate as a PDF, please complete the payment of {priceLabel} with M-Pesa, card or another available method.
-                    Your payment helps us maintain and improve the platform.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-          {!paymentLoading && isPaid && (
-            <p className="text-xs text-muted-foreground">
-              Click the "Download PDF" button above to download this certificate as a professional PDF file.
+        {record.isIssued ? (
+          <div className="mt-8 p-6 rounded-2xl bg-card border border-border">
+            <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-success" />
+              Verifiable by anyone
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              The QR code on your certificate opens its public record at{' '}
+              <Link href={`/verify/${certificateId}`} className="text-primary underline break-all">
+                {verifyUrl}
+              </Link>
+              . Whoever checks it will see the same name, certificate ID and security code as on the
+              PDF, confirmed by the issuer&apos;s digital signature.
             </p>
-          )}
-        </div>
+            <dl className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+              <div>
+                <dt className="text-muted-foreground">Issued to</dt>
+                <dd className="font-semibold text-foreground">{record.recipientName}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Security code</dt>
+                <dd className="font-mono font-semibold text-foreground">{record.securityCode}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Name corrections left</dt>
+                <dd className="font-semibold text-foreground">{record.nameCorrectionsLeft}</dd>
+              </div>
+            </dl>
+            {record.revision > 1 && (
+              <p className="mt-4 text-xs text-muted-foreground">
+                This is revision {record.revision}. Copies downloaded before the last name correction no longer
+                match the record, so share this version.
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="mt-8 p-6 rounded-2xl bg-card border border-border text-center">
+            <Lock className="w-10 h-10 text-primary mx-auto mb-3" />
+            <h3 className="text-xl font-bold text-foreground mb-2">This is a specimen</h3>
+            {paymentData && (
+              <div className="mb-4">
+                <CertificatePrice price={paymentData.price} listPrice={paymentData.listPrice} />
+              </div>
+            )}
+            <p className="text-sm text-muted-foreground max-w-lg mx-auto mb-2">
+              Pay once to issue your certificate with its ID, security code and verification QR code,
+              and download it as a PDF.
+            </p>
+            <p className="text-sm text-muted-foreground max-w-lg mx-auto mb-6">
+              It will be issued to <strong className="text-foreground">{record.recipientName}</strong>. If that
+              isn&apos;t your full name as on your ID,{' '}
+              <Link href="/settings" className="text-primary underline">
+                change it in Settings
+              </Link>{' '}
+              first: after payment only small spelling corrections can be made.
+            </p>
+            <button
+              onClick={checkout.pay}
+              disabled={isOpening}
+              className="inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground py-3 px-8 rounded-xl font-medium hover:bg-primary/90 transition-colors disabled:opacity-70 disabled:cursor-wait"
+            >
+              {isOpening && <Loader2 className="w-4 h-4 animate-spin" />}
+              {isOpening ? 'Opening secure checkout...' : 'Pay Now to Unlock'}
+            </button>
+          </div>
+        )}
       </div>
+
+      {record.isIssued && (
+        <CertificateNameDialog
+          open={correcting}
+          onOpenChange={setCorrecting}
+          certificateId={certificateId}
+          currentName={record.recipientName}
+          correctionsLeft={record.nameCorrectionsLeft}
+        />
+      )}
 
       {/* Payment status after the Paystack checkout popup */}
       <PaymentModal

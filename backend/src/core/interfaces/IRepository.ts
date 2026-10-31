@@ -21,13 +21,6 @@ export interface IRepository<T> {
   findById(id: string): Promise<T | null>;
 
   /**
-   * Find multiple records
-   * @param filters - Query filters
-   * @returns Array of records
-   */
-  findMany(filters?: any): Promise<T[]>;
-
-  /**
    * Create a new record
    * @param data - Record data
    * @returns Created record
@@ -41,11 +34,4 @@ export interface IRepository<T> {
    * @returns Updated record
    */
   update(id: string, data: any): Promise<T>;
-
-  /**
-   * Delete a record by ID
-   * @param id - Record ID
-   * @returns Deleted record
-   */
-  delete(id: string): Promise<T>;
 }

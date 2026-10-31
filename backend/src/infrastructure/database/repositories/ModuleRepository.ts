@@ -46,8 +46,4 @@ export class ModuleRepository extends BaseRepository<Module> {
       },
     });
   }
-
-  async findByNumber(number: number): Promise<Module | null> {
-    return this.dataProvider.findUnique<Module>(this.model, { number });
-  }
 }

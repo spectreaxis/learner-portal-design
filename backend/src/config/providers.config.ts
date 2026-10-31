@@ -145,13 +145,4 @@ export class ProviderFactory {
   static getConfig(): ProviderConfig {
     return this.config;
   }
-
-  /**
-   * Reset provider instances (useful for testing)
-   */
-  static reset(): void {
-    this.dataProviderInstance = null;
-    this.authProviderInstance = null;
-    this.paymentProviderInstances.clear();
-  }
 }
